@@ -71,7 +71,7 @@ export function BookingFlow() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="mx-auto mb-5 flex items-center justify-center w-28 h-28 rounded-full bg-[#0b1220] border border-white/10 shadow-lg">
+          <div className="mx-auto mb-5 flex items-center justify-center w-28 h-28 rounded-full bg-black border border-white/10 shadow-lg">
             <img
               src="/logo200x200.png"
               alt="JacSal Services — Supporting Dreams"

@@ -166,9 +166,9 @@ export function BookingFlow() {
         {/* Header */}
         <div className="text-center mb-12">
           <img
-            src="/logo-wordmark.png"
+            src="/logo200x200.png"
             alt="JacSal Services — Supporting Dreams"
-            className="h-12 md:h-14 w-auto mx-auto mb-6"
+            className="h-24 w-auto mx-auto mb-4"
           />
           <h1 className="mb-3">Book Your Consultation</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">

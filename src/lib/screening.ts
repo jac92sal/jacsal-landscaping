@@ -45,7 +45,6 @@ export async function screenStep(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${supabaseAnonKey}`,
-      apikey: supabaseAnonKey,
     },
     body: JSON.stringify({ contact, history }),
   });
@@ -114,7 +113,6 @@ export async function analyzeScreening(data: ScreeningOneData): Promise<AIAnalys
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${supabaseAnonKey}`,
-        apikey: supabaseAnonKey,
       },
       body: JSON.stringify(data),
     });

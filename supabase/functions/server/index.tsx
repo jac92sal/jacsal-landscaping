@@ -255,8 +255,10 @@ function confirmationEmail(firstName: string, niceDate: string, time: string): {
   const html =
     `<div style='background:#0a0e1a;padding:24px;font-family:Inter,Segoe UI,Arial,sans-serif'>` +
       `<div style='max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0'>` +
-        `<div style='background:#0b1220;padding:28px;text-align:center'>` +
-          `<img src='${LOGO_URL}' alt='JacSal Services' width='110' style='display:inline-block;max-width:110px;height:auto' />` +
+        `<div style='background:#ffffff;padding:28px;text-align:center;border-bottom:1px solid #e2e8f0'>` +
+          `<div style='display:inline-block;width:104px;height:104px;border-radius:50%;background:#0b1220'>` +
+            `<img src='${LOGO_URL}' alt='JacSal Services' width='64' height='64' style='margin-top:20px' />` +
+          `</div>` +
         `</div>` +
         `<div style='padding:32px;color:#0f172a'>` +
           `<div style='display:inline-block;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;margin-bottom:14px'>CONFIRMED</div>` +

@@ -71,11 +71,13 @@ export function BookingFlow() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <img
-            src="/logo200x200.png"
-            alt="JacSal Services — Supporting Dreams"
-            className="h-24 w-auto mx-auto mb-4"
-          />
+          <div className="mx-auto mb-5 flex items-center justify-center w-28 h-28 rounded-full bg-[#0b1220] border border-white/10 shadow-lg">
+            <img
+              src="/logo200x200.png"
+              alt="JacSal Services — Supporting Dreams"
+              className="w-[72px] h-[72px] object-contain"
+            />
+          </div>
           <h1 className="mb-3">Request a Consultation</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Share a few details and your preferred times. Our assistant will ask a couple of quick

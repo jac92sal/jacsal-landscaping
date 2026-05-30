@@ -35,3 +35,6 @@ pnpm-debug.log*
 # Supabase local
 supabase/.temp/
 supabase/.branches/
+
+# Local Figma extract (not part of source)
+.figma-extract/

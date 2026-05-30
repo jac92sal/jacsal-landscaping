@@ -17,8 +17,8 @@ const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const envProjectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
 const envAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-const supabaseUrl = envUrl || `https://${envProjectId || projectId}.supabase.co`;
-const supabaseAnonKey = envAnonKey || publicAnonKey;
+export const supabaseUrl = envUrl || `https://${envProjectId || projectId}.supabase.co`;
+export const supabaseAnonKey = envAnonKey || publicAnonKey;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

@@ -7,9 +7,52 @@ export interface AIAnalysis {
   recommendations: string[];
 }
 
-// The deployed Claude-powered Edge Function. Defaults to this project's
-// function; override with VITE_AI_ANALYSIS_URL for a different deployment.
+// The deployed Claude-powered Edge Functions. Override with env vars for a
+// different deployment.
 const DEFAULT_ANALYSIS_URL = `${supabaseUrl}/functions/v1/make-server-e8cd329a/analyze`;
+const DEFAULT_SCREEN_URL = `${supabaseUrl}/functions/v1/make-server-e8cd329a/screen`;
+
+export interface ScreenAnalysis {
+  summary: string;
+  score: number;
+  fit: 'strong' | 'possible' | 'weak';
+  recommendations: string[];
+}
+
+export interface ScreenTurn {
+  done: boolean;
+  question: string | null;
+  analysis: ScreenAnalysis | null;
+}
+
+export interface QA {
+  question: string;
+  answer: string;
+}
+
+/**
+ * One turn of the branching screening agent. Sends the prospect's contact info
+ * plus the Q&A history so far; gets back the next question, or done=true with
+ * an internal fit assessment. Stateless — the caller accumulates `history`.
+ */
+export async function screenStep(
+  contact: Record<string, unknown>,
+  history: QA[],
+): Promise<ScreenTurn> {
+  const url = (import.meta.env.VITE_AI_SCREEN_URL as string | undefined) || DEFAULT_SCREEN_URL;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
+    },
+    body: JSON.stringify({ contact, history }),
+  });
+  if (!res.ok) throw new Error(`screen request failed: ${res.status}`);
+  const json = (await res.json()) as ScreenTurn;
+  return json;
+}
 
 /**
  * Deterministic, rule-based analysis. Used as a graceful fallback whenever the

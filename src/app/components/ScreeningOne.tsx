@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 
 interface ScreeningOneProps {
   onComplete: (data: ScreeningOneData) => void;
@@ -26,17 +25,9 @@ export function ScreeningOne({ onComplete }: ScreeningOneProps) {
     description: '',
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
     onComplete(formData);
-    setIsSubmitting(false);
   };
 
   const isFormValid = formData.name && formData.email && formData.serviceInterest && formData.description;
@@ -44,9 +35,9 @@ export function ScreeningOne({ onComplete }: ScreeningOneProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto">
       <div>
-        <h2 className="mb-2">Initial Service Alignment</h2>
+        <h2 className="mb-2">Tell Us About Your Project</h2>
         <p className="text-muted-foreground">
-          Help us understand your needs so we can match you with the right services.
+          A few basics so we know who you are and what you need.
         </p>
       </div>
 
@@ -171,17 +162,10 @@ export function ScreeningOne({ onComplete }: ScreeningOneProps) {
 
       <button
         type="submit"
-        disabled={!isFormValid || isSubmitting}
-        className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        disabled={!isFormValid}
+        className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Analyzing with AI...
-          </>
-        ) : (
-          'Continue to Next Step'
-        )}
+        Continue
       </button>
     </form>
   );

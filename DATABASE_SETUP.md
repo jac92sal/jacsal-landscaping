@@ -1,11 +1,17 @@
-# Database Setup - REQUIRED STEP
+# Database Setup - REQUIRED STEPS
 
 ## ✅ Supabase Connection
 Your application is already connected to Supabase! The connection details are automatically configured.
 
-## 🗄️ Create the Database Table
+## 🗄️ Database Tables
 
-**You must run this SQL once to create the required table:**
+You need to create TWO sets of tables:
+1. **Public Booking Tables** - For storing client bookings
+2. **Admin Tables** - For admin dashboard and configuration
+
+## Step 1: Create Public Booking Tables
+
+**Run this SQL once to create the booking table:**
 
 ### Step 1: Open Supabase SQL Editor
 1. Go to: https://supabase.com/dashboard/project/lceemzggwtuldkdbgort
@@ -78,9 +84,47 @@ Go to **Table Editor** → **screening_responses** to confirm the table was crea
 
 ---
 
-## ✨ That's It!
+## Step 2: Create Admin Dashboard Tables
 
-Once you've run the SQL, your application is fully functional. Test it by:
+**IMPORTANT:** To use the admin dashboard features, run the admin schema:
+
+1. Copy the contents of `supabase-admin-schema.sql`
+2. Paste into SQL Editor
+3. Click **Run**
+
+This creates tables for:
+- Admin authentication
+- Secrets vault (API keys)
+- Services configuration
+- Screening questions customization
+- Time slots management
+- App settings
+
+**See `ADMIN_SETUP.md` for complete admin dashboard documentation.**
+
+## Step 3: Create Branding Tables (For White Label)
+
+**NEW:** For white-label branding and embed features:
+
+1. Copy the contents of `supabase-branding-schema.sql`
+2. Paste into SQL Editor
+3. Click **Run**
+
+This creates the `branding_settings` table for:
+- Company information
+- Logo and colors
+- Typography
+- Social media links
+- White label settings
+- Custom CSS
+
+**See `WHITE_LABEL_GUIDE.md` for complete white-label setup.**
+
+---
+
+## ✨ You're Ready!
+
+Once you've run BOTH SQL files, your application is fully functional. Test it by:
 1. Filling out the initial screening form
 2. Viewing the AI analysis
 3. Completing the detailed screening

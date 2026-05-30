@@ -1,13 +1,12 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import * as kv from "./kv_store.tsx";
+
 const app = new Hono();
 
-// Enable logger
 app.use('*', logger(console.log));
-
-// Enable CORS for all routes and methods
 app.use(
   "/*",
   cors({
@@ -19,92 +18,108 @@ app.use(
   }),
 );
 
-// Health check endpoint
 app.get("/make-server-e8cd329a/health", (c) => {
   return c.json({ status: "ok" });
 });
 
-// ──────────────────────────────────────────────────────────────────────────
-// AI screening analysis (Claude-powered)
-//
-// Receives the client's Screening One answers and returns a genuine alignment
-// assessment. The Anthropic API key is read from the function's environment
-// (set via `supabase secrets set ANTHROPIC_API_KEY=...`) and never leaves the
-// server. The client calls this via VITE_AI_ANALYSIS_URL; if the key is
-// missing or the call fails, the client falls back to rule-based scoring.
-// ──────────────────────────────────────────────────────────────────────────
-app.post("/make-server-e8cd329a/analyze", async (c) => {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) {
-    return c.json({ error: "ANTHROPIC_API_KEY is not configured" }, 503);
-  }
+function admin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
 
-  let body: Record<string, unknown>;
+async function loadSecret(keyName: string): Promise<string | null> {
+  const { data, error } = await admin()
+    .from("secrets_vault")
+    .select("key_value, is_active")
+    .eq("key_name", keyName)
+    .maybeSingle();
+  if (error) {
+    console.log(`Error loading secret ${keyName} from vault: ${error.message}`);
+    return null;
+  }
+  if (!data || data.is_active === false) return null;
+  return data.key_value as string;
+}
+
+app.post("/make-server-e8cd329a/secrets/test", async (c) => {
+  let body: { key_name?: string };
   try {
     body = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400);
+  } catch (e) {
+    return c.json({ ok: false, error: `Invalid JSON body while testing secret: ${e}` }, 400);
   }
+  const keyName = body.key_name;
+  if (!keyName) return c.json({ ok: false, error: "Missing key_name in request body" }, 400);
 
-  const model = Deno.env.get("ANTHROPIC_MODEL") || "claude-3-5-sonnet-latest";
-
-  const systemPrompt =
-    "You are a client-screening analyst for a professional services firm. " +
-    "Given a prospect's intake answers, assess how well their needs align with " +
-    "the firm's services. Respond with ONLY a JSON object (no markdown, no prose) " +
-    'of the exact shape: {"alignment": string, "score": number, "recommendations": string[]}. ' +
-    "`alignment` is 2-3 sentences addressed to the prospect. `score` is an integer 0-100 " +
-    "representing fit. `recommendations` is 2-4 short, concrete next-step suggestions.";
-
-  const userContent =
-    "Prospect intake answers:\n" +
-    `- Service interest: ${body.serviceInterest ?? "n/a"}\n` +
-    `- Budget range: ${body.budgetRange ?? "n/a"}\n` +
-    `- Timeline: ${body.timeline ?? "n/a"}\n` +
-    `- Project description: ${body.description ?? "n/a"}`;
+  const value = await loadSecret(keyName);
+  if (!value) return c.json({ ok: false, error: `Secret "${keyName}" not found or inactive in vault` }, 404);
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        system: [
-          { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-        ],
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text();
-      console.error("Anthropic API error:", res.status, detail);
-      return c.json({ error: "AI provider error" }, 502);
+    if (keyName === "ANTHROPIC_API_KEY") {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": value,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 8,
+          messages: [{ role: "user", content: "ping" }],
+        }),
+      });
+      const text = await r.text();
+      if (!r.ok) {
+        console.log(`Anthropic key test failed (${r.status}): ${text}`);
+        return c.json({ ok: false, status: r.status, error: extractApiError(text) }, 200);
+      }
+      return c.json({ ok: true, provider: "anthropic", message: "Key is valid" });
     }
 
-    const payload = await res.json();
-    const text: string = payload?.content?.[0]?.text ?? "";
+    if (keyName === "OPENAI_API_KEY") {
+      const r = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${value}` },
+      });
+      const text = await r.text();
+      if (!r.ok) {
+        console.log(`OpenAI key test failed (${r.status}): ${text}`);
+        return c.json({ ok: false, status: r.status, error: extractApiError(text) }, 200);
+      }
+      return c.json({ ok: true, provider: "openai", message: "Key is valid" });
+    }
 
-    // The model may occasionally wrap JSON in a code fence; strip it.
-    const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
+    if (keyName === "RESEND_API_KEY") {
+      const r = await fetch("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${value}` },
+      });
+      const text = await r.text();
+      if (!r.ok) {
+        console.log(`Resend key test failed (${r.status}): ${text}`);
+        return c.json({ ok: false, status: r.status, error: extractApiError(text) }, 200);
+      }
+      return c.json({ ok: true, provider: "resend", message: "Key is valid" });
+    }
 
     return c.json({
-      alignment: String(parsed.alignment ?? ""),
-      score: Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 0))),
-      recommendations: Array.isArray(parsed.recommendations)
-        ? parsed.recommendations.map(String)
-        : [],
-    });
-  } catch (err) {
-    console.error("AI analysis failed:", err);
-    return c.json({ error: "AI analysis failed" }, 500);
+      ok: false,
+      error: `No automated test available for "${keyName}". Supported: ANTHROPIC_API_KEY, OPENAI_API_KEY, RESEND_API_KEY.`,
+    }, 200);
+  } catch (e) {
+    console.log(`Network error while testing ${keyName}: ${e}`);
+    return c.json({ ok: false, error: `Network error while testing ${keyName}: ${e}` }, 200);
   }
 });
+
+function extractApiError(text: string): string {
+  try {
+    const j = JSON.parse(text);
+    return j?.error?.message || j?.message || text.slice(0, 300);
+  } catch {
+    return text.slice(0, 300);
+  }
+}
 
 Deno.serve(app.fetch);

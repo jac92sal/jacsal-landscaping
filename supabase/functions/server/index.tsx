@@ -272,4 +272,69 @@ app.post(`${PREFIX}/secrets/test`, async (c) => {
   }
 });
 
+// ── Confirm a request + email the client (admin) ──────────────────────────
+app.post(`${PREFIX}/confirm`, async (c) => {
+  let body: { id?: string; date?: string; time?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, error: "Invalid JSON body" }, 400);
+  }
+  const { id, date, time } = body;
+  if (!id || !date || !time) {
+    return c.json({ ok: false, error: "id, date and time are required" }, 400);
+  }
+
+  const sb = admin();
+  const { data: row, error: updErr } = await sb
+    .from("screening_responses")
+    .update({ booking_date: `${date}T12:00:00Z`, booking_time: time, status: "confirmed" })
+    .eq("id", id)
+    .select("name, email")
+    .single();
+  if (updErr || !row) {
+    return c.json({ ok: false, error: updErr?.message ?? "Request not found" }, 404);
+  }
+
+  const resendKey = await getSecret("RESEND_API_KEY");
+  if (!resendKey) {
+    return c.json({ ok: true, emailed: false, error: "Confirmed, but RESEND_API_KEY is not configured" });
+  }
+  const from = (await getSecret("MAIL_FROM")) || "JacSal Services <onboarding@resend.dev>";
+  const niceDate = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
+  });
+  const firstName = String(row.name ?? "there").split(" ")[0];
+  const html =
+    `<div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;color:#0f172a">` +
+    `<h2 style="color:#2563eb">Your consultation is confirmed</h2>` +
+    `<p>Hi ${firstName},</p>` +
+    `<p>Great news — we've confirmed your consultation with JacSal Services for:</p>` +
+    `<p style="font-size:18px;font-weight:600">${niceDate} at ${time}</p>` +
+    `<p>We're looking forward to speaking with you. If you need to make a change, just reply to this email.</p>` +
+    `<p style="color:#64748b;font-size:13px;margin-top:24px">JacSal Services — Supporting Dreams</p>` +
+    `</div>`;
+
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from,
+        to: row.email,
+        subject: "Your JacSal Services consultation is confirmed",
+        html,
+      }),
+    });
+    const text = await r.text();
+    if (!r.ok) {
+      console.error("Resend error:", r.status, text);
+      return c.json({ ok: true, emailed: false, error: extractApiError(text) });
+    }
+    return c.json({ ok: true, emailed: true });
+  } catch (e) {
+    return c.json({ ok: true, emailed: false, error: `Email send failed: ${e}` });
+  }
+});
+
 Deno.serve(app.fetch);

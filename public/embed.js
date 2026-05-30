@@ -52,37 +52,17 @@
   function open() {
     if (overlay) return;
     overlay = document.createElement("div");
+    overlay.className = "jacsal-ov";
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
-    overlay.style.cssText = [
-      "position:fixed",
-      "inset:0",
-      "background:rgba(3,7,18,0.72)",
-      "backdrop-filter:blur(4px)",
-      "-webkit-backdrop-filter:blur(4px)",
-      "display:flex",
-      "align-items:center",
-      "justify-content:center",
-      "padding:16px",
-      "z-index:2147483000",
-      "animation:jacsalFade .18s ease-out",
-    ].join(";");
 
     var panel = document.createElement("div");
-    panel.style.cssText = [
-      "position:relative",
-      "width:min(560px,100%)",
-      "height:min(900px,95vh)",
-      "background:#0a0e1a",
-      "border-radius:16px",
-      "overflow:hidden",
-      "box-shadow:0 24px 60px rgba(0,0,0,0.5)",
-    ].join(";");
+    panel.className = "jacsal-panel";
 
     var frame = document.createElement("iframe");
     frame.src = portalUrl;
     frame.title = "Book a Consultation";
-    frame.style.cssText = "width:100%;height:100%;border:0;display:block;";
+    frame.className = "jacsal-frame";
     frame.setAttribute("allow", "clipboard-write");
 
     panel.appendChild(frame);
@@ -116,7 +96,22 @@
 
   function mount() {
     var style = document.createElement("style");
-    style.textContent = "@keyframes jacsalFade{from{opacity:0}to{opacity:1}}";
+    style.textContent = [
+      "@keyframes jacsalFade{from{opacity:0}to{opacity:1}}",
+      // Overlay backdrop
+      ".jacsal-ov{position:fixed;inset:0;background:rgba(3,7,18,0.72);" +
+        "backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);" +
+        "display:flex;align-items:center;justify-content:center;padding:24px;" +
+        "z-index:2147483000;animation:jacsalFade .18s ease-out}",
+      // Desktop: large, roughly square panel so the flow fits without scrolling
+      ".jacsal-panel{position:relative;width:min(960px,95vw);height:min(940px,94vh);" +
+        "background:#0a0e1a;border-radius:16px;overflow:hidden;" +
+        "box-shadow:0 24px 60px rgba(0,0,0,0.5)}",
+      ".jacsal-frame{width:100%;height:100%;border:0;display:block}",
+      // Mobile: full-screen, scrollable
+      "@media (max-width:640px){.jacsal-ov{padding:0}" +
+        ".jacsal-panel{width:100%;height:100%;border-radius:0}}",
+    ].join("");
     document.head.appendChild(style);
 
     var btn = makeButton();

@@ -165,10 +165,15 @@ export function BookingFlow() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="mb-3">Client Consultation Booking</h1>
+          <img
+            src="/logo-wordmark.png"
+            alt="JacSal Services — Supporting Dreams"
+            className="h-12 md:h-14 w-auto mx-auto mb-6"
+          />
+          <h1 className="mb-3">Book Your Consultation</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Complete our AI-powered screening process to ensure we're the right fit for your needs,
-            then schedule your personalized consultation.
+            Complete our quick AI-powered screening so we can make sure we're the right fit —
+            then pick a time that works for you.
           </p>
         </div>
 

@@ -1,17 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
-// Resolve connection from environment first so each deployment (and each
-// customer install) can point at its OWN Supabase project via a .env file.
-// Falls back to the bundled demo project values when no env is provided.
-// The anon key is public-by-design (protected by RLS); the service_role key
-// must NEVER appear here — it stays in the Edge Function only.
-const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const envProjectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-const envAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-export const supabaseUrl = envUrl || `https://${envProjectId || projectId}.supabase.co`;
-export const supabaseAnonKey = envAnonKey || publicAnonKey;
+const supabaseUrl = `https://${projectId}.supabase.co`;
+const supabaseAnonKey = publicAnonKey;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

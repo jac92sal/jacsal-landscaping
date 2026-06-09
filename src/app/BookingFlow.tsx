@@ -1,92 +1,179 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { Toaster } from './components/ui/sonner';
+import { Link } from 'react-router-dom';
+import { Home } from 'lucide-react';
 import { StepIndicator } from './components/StepIndicator';
 import { ScreeningOne, ScreeningOneData } from './components/ScreeningOne';
-import { RequestTimes, RequestedTime } from './components/RequestTimes';
-import { ScreeningChat } from './components/ScreeningChat';
-import { RequestSent } from './components/RequestSent';
+import { ScreeningTwo, ScreeningTwoData } from './components/ScreeningTwo';
+import { BookingCalendar } from './components/BookingCalendar';
+import { Confirmation } from './components/Confirmation';
 import { supabase } from '../lib/supabase';
-import { QA, ScreenAnalysis } from '../lib/screening';
 
-type Step = 'contact' | 'times' | 'screening' | 'sent';
+type Step = 'screening-one' | 'screening-two' | 'booking' | 'confirmation';
+
+interface AIAnalysis {
+  alignment: string;
+  score: number;
+  recommendations: string[];
+}
 
 export function BookingFlow() {
-  const [currentStep, setCurrentStep] = useState<Step>('contact');
-  const [contact, setContact] = useState<ScreeningOneData | null>(null);
-  const [requestedTimes, setRequestedTimes] = useState<RequestedTime[]>([]);
+  const [currentStep, setCurrentStep] = useState<Step>('screening-one');
+  const [screeningOneData, setScreeningOneData] = useState<ScreeningOneData | null>(null);
+  const [screeningTwoData, setScreeningTwoData] = useState<ScreeningTwoData | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [bookingDetails, setBookingDetails] = useState<{
+    date: Date;
+    time: string;
+    name: string;
+    email: string;
+  } | null>(null);
 
-  const steps = ['Your Details', 'Preferred Times', 'A Few Questions', 'Sent'];
-  const stepIndex = { contact: 0, times: 1, screening: 2, sent: 3 }[currentStep];
+  const steps = ['Initial Screening', 'Detailed Info', 'Book Time', 'Confirmed'];
+  const stepIndex = {
+    'screening-one': 0,
+    'screening-two': 1,
+    'booking': 2,
+    'confirmation': 3,
+  }[currentStep];
 
-  const handleContact = (data: ScreeningOneData) => {
-    setContact(data);
-    setCurrentStep('times');
+  const generateAIAnalysis = (data: ScreeningOneData): AIAnalysis => {
+    // Simulate AI analysis based on input
+    const serviceScores: Record<string, number> = {
+      consulting: 85,
+      design: 90,
+      development: 88,
+      marketing: 82,
+      other: 75,
+    };
+
+    const score = serviceScores[data.serviceInterest] || 80;
+
+    const alignmentTexts: Record<string, string> = {
+      consulting:
+        'Your project aligns well with our strategic consulting services. We have extensive experience helping clients navigate complex business challenges.',
+      design:
+        "Excellent match! Your creative needs align perfectly with our design team's expertise in creating compelling visual experiences.",
+      development:
+        'Great fit! Your technical requirements match our engineering capabilities. We can help bring your vision to life.',
+      marketing:
+        'Strong alignment with our marketing services. We can help you reach and engage your target audience effectively.',
+      other:
+        "We can certainly help! Based on your description, we'll connect you with the right specialist from our team.",
+    };
+
+    const recommendations = [
+      `We recommend a comprehensive ${data.serviceInterest} approach`,
+      'Consider starting with a discovery phase to align expectations',
+      'Our team will prepare customized materials for your consultation',
+    ];
+
+    return {
+      alignment: alignmentTexts[data.serviceInterest] || alignmentTexts.other,
+      score,
+      recommendations,
+    };
   };
 
-  const handleTimes = (times: RequestedTime[]) => {
-    setRequestedTimes(times);
-    setCurrentStep('screening');
-  };
+  const handleScreeningOneComplete = async (data: ScreeningOneData) => {
+    setScreeningOneData(data);
 
-  const handleScreeningComplete = async (history: QA[], analysis: ScreenAnalysis | null) => {
-    if (!contact) return;
+    // Generate AI analysis
+    const analysis = generateAIAnalysis(data);
+    setAiAnalysis(analysis);
 
-    const { error } = await supabase.from('screening_responses').insert({
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone,
-      service_interest: contact.serviceInterest,
-      budget_range: contact.budgetRange,
-      timeline: contact.timeline,
-      description: contact.description,
-      requested_times: requestedTimes,
-      conversation: { history, analysis },
-      ai_analysis: analysis?.summary ?? null,
-      alignment_score: analysis?.score ?? null,
-      screening_one_completed: true,
-      screening_two_completed: true,
-      status: 'requested',
-    });
-
-    if (error) {
-      console.error('Error saving request:', error);
-      toast.error("We couldn't submit your request automatically.", {
-        description: 'Please reach out directly and we\'ll get you scheduled.',
+    // Save to Supabase
+    try {
+      await supabase.from('screening_responses').insert({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        service_interest: data.serviceInterest,
+        budget_range: data.budgetRange,
+        timeline: data.timeline,
+        description: data.description,
+        screening_one_completed: true,
+        ai_analysis: analysis.alignment,
+        alignment_score: analysis.score,
+        status: 'screening_two',
       });
+    } catch (error) {
+      console.error('Error saving screening data:', error);
     }
 
-    setCurrentStep('sent');
+    setCurrentStep('screening-two');
+  };
+
+  const handleScreeningTwoComplete = async (data: ScreeningTwoData) => {
+    setScreeningTwoData(data);
+
+    // Update Supabase
+    if (screeningOneData) {
+      try {
+        await supabase
+          .from('screening_responses')
+          .update({
+            screening_two_completed: true,
+            status: 'booking',
+          })
+          .eq('email', screeningOneData.email);
+      } catch (error) {
+        console.error('Error updating screening data:', error);
+      }
+    }
+
+    setCurrentStep('booking');
+  };
+
+  const handleBooking = async (date: Date, time: string) => {
+    if (screeningOneData) {
+      const details = {
+        date,
+        time,
+        name: screeningOneData.name,
+        email: screeningOneData.email,
+      };
+      setBookingDetails(details);
+
+      // Update Supabase
+      try {
+        await supabase
+          .from('screening_responses')
+          .update({
+            booking_date: date.toISOString(),
+            booking_time: time,
+            status: 'booked',
+          })
+          .eq('email', screeningOneData.email);
+      } catch (error) {
+        console.error('Error saving booking:', error);
+      }
+
+      setCurrentStep('confirmation');
+    }
   };
 
   const handleStartOver = () => {
-    setContact(null);
-    setRequestedTimes([]);
-    setCurrentStep('contact');
+    setCurrentStep('screening-one');
+    setScreeningOneData(null);
+    setScreeningTwoData(null);
+    setAiAnalysis(null);
+    setBookingDetails(null);
   };
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
-      <Toaster richColors position="top-center" />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="mx-auto mb-5 flex items-center justify-center w-28 h-28 rounded-full bg-black border border-white/10 shadow-lg">
-            <img
-              src="/logo200x200.png"
-              alt="JacSal Services — Supporting Dreams"
-              className="w-[72px] h-[72px] object-contain"
-            />
-          </div>
-          <h1 className="mb-3">Request a Consultation</h1>
+          <h1 className="mb-3">Client Consultation Booking</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Share a few details and your preferred times. Our assistant will ask a couple of quick
-            questions, then we'll review and confirm your consultation by email.
+            Complete our AI-powered screening process to ensure we're the right fit for your needs,
+            then schedule your personalized consultation.
           </p>
         </div>
 
         {/* Step Indicator */}
-        {currentStep !== 'sent' && (
+        {currentStep !== 'confirmation' && (
           <div className="mb-12">
             <StepIndicator currentStep={stepIndex} steps={steps} />
           </div>
@@ -94,29 +181,18 @@ export function BookingFlow() {
 
         {/* Current Step Content */}
         <div className="bg-card/50 rounded-xl p-8">
-          {currentStep === 'contact' && <ScreeningOne onComplete={handleContact} />}
-
-          {currentStep === 'times' && <RequestTimes onComplete={handleTimes} />}
-
-          {currentStep === 'screening' && contact && (
-            <ScreeningChat
-              contact={{
-                name: contact.name,
-                serviceInterest: contact.serviceInterest,
-                description: contact.description,
-                budgetRange: contact.budgetRange,
-                timeline: contact.timeline,
-              }}
-              onComplete={handleScreeningComplete}
-            />
+          {currentStep === 'screening-one' && (
+            <ScreeningOne onComplete={handleScreeningOneComplete} />
           )}
 
-          {currentStep === 'sent' && contact && (
-            <RequestSent
-              email={contact.email}
-              requestedTimes={requestedTimes}
-              onStartOver={handleStartOver}
-            />
+          {currentStep === 'screening-two' && aiAnalysis && (
+            <ScreeningTwo aiAnalysis={aiAnalysis} onComplete={handleScreeningTwoComplete} />
+          )}
+
+          {currentStep === 'booking' && <BookingCalendar onBook={handleBooking} />}
+
+          {currentStep === 'confirmation' && bookingDetails && (
+            <Confirmation bookingDetails={bookingDetails} onStartOver={handleStartOver} />
           )}
         </div>
       </div>

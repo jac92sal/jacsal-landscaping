@@ -18,6 +18,7 @@ interface AIAnalysis {
 
 export function BookingFlow() {
   const [currentStep, setCurrentStep] = useState<Step>('screening-one');
+  const [screeningId, setScreeningId] = useState<string | null>(null);
   const [screeningOneData, setScreeningOneData] = useState<ScreeningOneData | null>(null);
   const [screeningTwoData, setScreeningTwoData] = useState<ScreeningTwoData | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
@@ -68,21 +69,27 @@ export function BookingFlow() {
     const analysis = generateAIAnalysis(data);
     setAiAnalysis(analysis);
 
-    // Save to Supabase
+    // Save to Supabase and keep the new row id so later steps update the same record.
     try {
-      await supabase.from('screening_responses').insert({
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        service_interest: data.serviceInterest,
-        budget_range: data.budgetRange,
-        timeline: data.timeline,
-        description: data.description,
-        screening_one_completed: true,
-        ai_analysis: analysis.alignment,
-        alignment_score: analysis.score,
-        status: 'screening_two',
-      });
+      const { data: inserted, error } = await supabase
+        .from('screening_responses')
+        .insert({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          service_interest: data.serviceInterest,
+          budget_range: data.budgetRange,
+          timeline: data.timeline,
+          description: data.description,
+          screening_one_completed: true,
+          ai_analysis: analysis.alignment,
+          alignment_score: analysis.score,
+          status: 'screening_two',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      setScreeningId(inserted?.id ?? null);
     } catch (error) {
       console.error('Error saving screening data:', error);
     }
@@ -93,16 +100,23 @@ export function BookingFlow() {
   const handleScreeningTwoComplete = async (data: ScreeningTwoData) => {
     setScreeningTwoData(data);
 
-    // Update Supabase
+    // Persist the detailed Step 2 answers (previously these were dropped).
     if (screeningOneData) {
       try {
-        await supabase
+        const query = supabase
           .from('screening_responses')
           .update({
+            goals: data.goals,
+            challenges: data.challenges,
+            previous_experience: data.previousExperience,
+            additional_notes: data.additionalNotes,
             screening_two_completed: true,
             status: 'booking',
-          })
-          .eq('email', screeningOneData.email);
+          });
+        const { error } = screeningId
+          ? await query.eq('id', screeningId)
+          : await query.eq('email', screeningOneData.email);
+        if (error) throw error;
       } catch (error) {
         console.error('Error updating screening data:', error);
       }
@@ -123,14 +137,17 @@ export function BookingFlow() {
 
       // Update Supabase
       try {
-        await supabase
+        const query = supabase
           .from('screening_responses')
           .update({
             booking_date: date.toISOString(),
             booking_time: time,
             status: 'booked',
-          })
-          .eq('email', screeningOneData.email);
+          });
+        const { error } = screeningId
+          ? await query.eq('id', screeningId)
+          : await query.eq('email', screeningOneData.email);
+        if (error) throw error;
       } catch (error) {
         console.error('Error saving booking:', error);
       }
@@ -141,6 +158,7 @@ export function BookingFlow() {
 
   const handleStartOver = () => {
     setCurrentStep('screening-one');
+    setScreeningId(null);
     setScreeningOneData(null);
     setScreeningTwoData(null);
     setAiAnalysis(null);
@@ -179,7 +197,13 @@ export function BookingFlow() {
           {currentStep === 'booking' && <BookingCalendar onBook={handleBooking} />}
 
           {currentStep === 'confirmation' && bookingDetails && (
-            <Confirmation bookingDetails={bookingDetails} onStartOver={handleStartOver} />
+            <Confirmation
+              bookingDetails={bookingDetails}
+              screeningId={screeningId}
+              requiresDocuments={screeningOneData?.requiresDocuments}
+              serviceName={screeningOneData?.serviceName}
+              onStartOver={handleStartOver}
+            />
           )}
         </div>
       </div>

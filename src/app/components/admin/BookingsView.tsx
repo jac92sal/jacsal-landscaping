@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Mail, Phone, User, Loader2, Search } from 'lucide-react';
+import { Calendar, Clock, Mail, Phone, Loader2, Search, FileText, Download } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import {
+  ClientDocument,
+  fetchDocuments,
+  getDocumentSignedUrl,
+  formatFileSize,
+} from '../../../lib/documentsApi';
 import { format } from 'date-fns';
 
 interface Booking {
@@ -15,6 +21,8 @@ interface Booking {
   description: string;
   goals: string;
   challenges: string;
+  previous_experience: string;
+  additional_notes: string;
   ai_analysis: string;
   alignment_score: number;
   booking_date: string;
@@ -24,9 +32,11 @@ interface Booking {
 
 export function BookingsView() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [docsByScreening, setDocsByScreening] = useState<Record<string, ClientDocument[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [openingDoc, setOpeningDoc] = useState<string | null>(null);
 
   useEffect(() => {
     loadBookings();
@@ -34,17 +44,44 @@ export function BookingsView() {
 
   const loadBookings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('screening_responses')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [{ data, error }, docs] = await Promise.all([
+        supabase
+          .from('screening_responses')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        fetchDocuments().catch((e) => {
+          console.error(e);
+          return [] as ClientDocument[];
+        }),
+      ]);
 
       if (error) throw error;
       setBookings(data || []);
+
+      const grouped: Record<string, ClientDocument[]> = {};
+      for (const doc of docs) {
+        const key = doc.screening_id || '';
+        if (!key) continue;
+        (grouped[key] ||= []).push(doc);
+      }
+      setDocsByScreening(grouped);
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openDocument = async (doc: ClientDocument) => {
+    setOpeningDoc(doc.id);
+    try {
+      const url = await getDocumentSignedUrl(doc.file_path);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : 'Could not open document.');
+    } finally {
+      setOpeningDoc(null);
     }
   };
 
@@ -227,6 +264,74 @@ export function BookingsView() {
                         <Clock className="w-4 h-4 text-secondary" />
                         <span className="font-mono">{booking.booking_time}</span>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Detailed (Step 2) responses */}
+                  {(booking.goals ||
+                    booking.challenges ||
+                    booking.previous_experience ||
+                    booking.additional_notes) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm border-t border-border pt-3">
+                      {booking.goals && (
+                        <div>
+                          <span className="text-muted-foreground">Goals:</span>
+                          <p className="mt-1">{booking.goals}</p>
+                        </div>
+                      )}
+                      {booking.challenges && (
+                        <div>
+                          <span className="text-muted-foreground">Challenges:</span>
+                          <p className="mt-1">{booking.challenges}</p>
+                        </div>
+                      )}
+                      {booking.previous_experience && (
+                        <div>
+                          <span className="text-muted-foreground">Previous experience:</span>
+                          <p className="mt-1">{booking.previous_experience}</p>
+                        </div>
+                      )}
+                      {booking.additional_notes && (
+                        <div>
+                          <span className="text-muted-foreground">Additional notes:</span>
+                          <p className="mt-1">{booking.additional_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Uploaded documents */}
+                  {docsByScreening[booking.id]?.length > 0 && (
+                    <div className="border-t border-border pt-3 space-y-2">
+                      <div className="text-sm text-muted-foreground">
+                        Documents ({docsByScreening[booking.id].length})
+                      </div>
+                      {docsByScreening[booking.id].map((doc) => (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => openDocument(doc)}
+                          disabled={openingDoc === doc.id}
+                          className="w-full flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/70 transition-colors text-left disabled:opacity-50"
+                        >
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {doc.label || doc.file_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {doc.file_name}
+                              {doc.file_size ? ` · ${formatFileSize(doc.file_size)}` : ''}
+                              {doc.description ? ` — ${doc.description}` : ''}
+                            </div>
+                          </div>
+                          {openingDoc === doc.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                          ) : (
+                            <Download className="w-4 h-4 text-muted-foreground shrink-0" />
+                          )}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>

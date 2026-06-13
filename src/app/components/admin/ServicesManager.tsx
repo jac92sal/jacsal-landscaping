@@ -17,6 +17,7 @@ const EMPTY_FORM = {
   duration_minutes: 30,
   price: 0,
   is_free: false,
+  requires_documents: false,
 };
 
 export function ServicesManager() {
@@ -236,6 +237,20 @@ export function ServicesManager() {
               />
             </div>
 
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.requires_documents}
+                onChange={(e) =>
+                  setFormData({ ...formData, requires_documents: e.target.checked })
+                }
+                className="w-4 h-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Ask clients to share documents for this service
+              </span>
+            </label>
+
             <button
               onClick={handleAdd}
               disabled={!formData.service_name || !formData.service_value}
@@ -330,6 +345,17 @@ export function ServicesManager() {
                           Free
                         </label>
                       </div>
+                      <label className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(service.requires_documents)}
+                          onChange={(e) =>
+                            patchLocal(service.id, { requires_documents: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded border-border"
+                        />
+                        Ask clients to share documents
+                      </label>
                       <textarea
                         rows={3}
                         value={service.description || ''}
@@ -340,7 +366,14 @@ export function ServicesManager() {
                     </div>
                   ) : (
                     <>
-                      <div className="font-medium mb-1">{service.service_name}</div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium">{service.service_name}</span>
+                        {service.requires_documents && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
+                            Documents requested
+                          </span>
+                        )}
+                      </div>
                       <div className="text-sm text-secondary mb-1">{formatServiceMeta(service)}</div>
                       {service.description && (
                         <p className="text-sm text-muted-foreground">{service.description}</p>

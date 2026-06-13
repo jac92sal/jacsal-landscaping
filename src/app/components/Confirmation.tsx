@@ -1,5 +1,6 @@
 import { CheckCircle, Calendar, Clock, Mail } from 'lucide-react';
 import { format } from 'date-fns';
+import { DocumentUpload } from './DocumentUpload';
 
 interface ConfirmationProps {
   bookingDetails: {
@@ -8,10 +9,19 @@ interface ConfirmationProps {
     name: string;
     email: string;
   };
+  screeningId: string | null;
+  requiresDocuments?: boolean;
+  serviceName?: string;
   onStartOver: () => void;
 }
 
-export function Confirmation({ bookingDetails, onStartOver }: ConfirmationProps) {
+export function Confirmation({
+  bookingDetails,
+  screeningId,
+  requiresDocuments,
+  serviceName,
+  onStartOver,
+}: ConfirmationProps) {
   return (
     <div className="max-w-2xl mx-auto text-center space-y-8">
       <div className="inline-flex items-center justify-center w-20 h-20 bg-secondary/10 rounded-full">
@@ -84,6 +94,14 @@ export function Confirmation({ bookingDetails, onStartOver }: ConfirmationProps)
           </ul>
         </div>
       </div>
+
+      {/* Optional document sharing */}
+      <DocumentUpload
+        screeningId={screeningId}
+        email={bookingDetails.email}
+        requiresDocuments={requiresDocuments}
+        serviceName={serviceName}
+      />
 
       <div className="pt-4">
         <p className="text-sm text-muted-foreground mb-4">

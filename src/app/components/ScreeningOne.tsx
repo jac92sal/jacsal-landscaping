@@ -12,6 +12,7 @@ export interface ScreeningOneData {
   phone: string;
   serviceInterest: string;
   serviceName: string;
+  requiresDocuments: boolean;
   budgetRange: string;
   timeline: string;
   description: string;
@@ -29,6 +30,7 @@ export function ScreeningOne({ onComplete }: ScreeningOneProps) {
     phone: '',
     serviceInterest: '',
     serviceName: '',
+    requiresDocuments: false,
     budgetRange: '',
     timeline: '',
     description: '',
@@ -65,6 +67,7 @@ export function ScreeningOne({ onComplete }: ScreeningOneProps) {
       ...formData,
       serviceInterest: service.service_value,
       serviceName: service.service_name,
+      requiresDocuments: Boolean(service.requires_documents),
     });
   };
 

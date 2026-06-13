@@ -9,6 +9,7 @@ export interface Service {
   price: number; // dollars; 0 when is_free
   is_free: boolean;
   is_active: boolean;
+  requires_documents: boolean; // prompt the client to upload documents for this offer
   sort_order: number;
 }
 

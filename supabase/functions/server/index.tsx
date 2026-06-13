@@ -126,6 +126,7 @@ interface ServiceRecord {
   price: number; // in dollars; 0 when is_free
   is_free: boolean;
   is_active: boolean;
+  requires_documents: boolean; // prompt the client to upload documents for this offer
   sort_order: number;
 }
 
@@ -139,6 +140,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 0,
     is_free: true,
     is_active: true,
+    requires_documents: false,
     sort_order: 1,
   },
   {
@@ -150,6 +152,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 25,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 2,
   },
   {
@@ -160,6 +163,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 125,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 3,
   },
   {
@@ -171,6 +175,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 77.77,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 4,
   },
   {
@@ -182,6 +187,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 175,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 5,
   },
   {
@@ -193,6 +199,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 3000,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 6,
   },
   {
@@ -204,6 +211,7 @@ const SEED_SERVICES: Omit<ServiceRecord, "id">[] = [
     price: 225,
     is_free: false,
     is_active: true,
+    requires_documents: false,
     sort_order: 7,
   },
 ];
@@ -258,6 +266,7 @@ app.post("/make-server-e8cd329a/services", async (c) => {
       price: body.is_free ? 0 : Number(body.price) || 0,
       is_free: Boolean(body.is_free),
       is_active: body.is_active ?? true,
+      requires_documents: Boolean(body.requires_documents),
       sort_order: maxOrder + 1,
     };
     await kv.set(`service:${id}`, record);
@@ -282,6 +291,10 @@ app.put("/make-server-e8cd329a/services/:id", async (c) => {
         body.duration_minutes !== undefined ? Number(body.duration_minutes) || 0 : existing.duration_minutes,
       price: (body.is_free ?? existing.is_free) ? 0 : Number(body.price ?? existing.price) || 0,
       is_free: body.is_free !== undefined ? Boolean(body.is_free) : existing.is_free,
+      requires_documents:
+        body.requires_documents !== undefined
+          ? Boolean(body.requires_documents)
+          : Boolean(existing.requires_documents),
     };
     await kv.set(`service:${id}`, updated);
     return c.json({ ok: true, service: updated });
@@ -299,6 +312,28 @@ app.delete("/make-server-e8cd329a/services/:id", async (c) => {
   } catch (e) {
     console.log(`Error deleting service: ${e}`);
     return c.json({ ok: false, error: `Error deleting service: ${e}` }, 500);
+  }
+});
+
+// ---- Documents -----------------------------------------------------------
+// Client document bytes live in the private `client-documents` bucket. The
+// admin panel requests a short-lived signed URL here (service role) so files
+// are never publicly readable.
+app.post("/make-server-e8cd329a/documents/signed-url", async (c) => {
+  try {
+    const body = await c.req.json();
+    const path = body.path as string | undefined;
+    if (!path) return c.json({ ok: false, error: "Missing document path" }, 400);
+    const { data, error } = await admin()
+      .storage.from("client-documents")
+      .createSignedUrl(path, 60 * 10); // valid for 10 minutes
+    if (error || !data) {
+      return c.json({ ok: false, error: error?.message || "Could not sign URL" }, 500);
+    }
+    return c.json({ ok: true, url: data.signedUrl });
+  } catch (e) {
+    console.log(`Error signing document URL: ${e}`);
+    return c.json({ ok: false, error: `Error signing document URL: ${e}` }, 500);
   }
 });
 

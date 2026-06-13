@@ -1,26 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, GripVertical, Loader2, List } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { Plus, Edit2, Trash2, Save, X, GripVertical, Loader2, List, Sparkles } from 'lucide-react';
+import {
+  Service,
+  fetchServices,
+  seedServicesIfEmpty,
+  createService,
+  updateService,
+  deleteService,
+  formatServiceMeta,
+} from '../../../lib/servicesApi';
 
-interface Service {
-  id: string;
-  service_name: string;
-  service_value: string;
-  description: string;
-  is_active: boolean;
-  sort_order: number;
-}
+const EMPTY_FORM = {
+  service_name: '',
+  service_value: '',
+  description: '',
+  duration_minutes: 30,
+  price: 0,
+  is_free: false,
+};
 
 export function ServicesManager() {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
-    service_name: '',
-    service_value: '',
-    description: '',
-  });
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
   useEffect(() => {
     loadServices();
@@ -28,13 +33,7 @@ export function ServicesManager() {
 
   const loadServices = async () => {
     try {
-      const { data, error } = await supabase
-        .from('services_config')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-      setServices(data || []);
+      setServices(await fetchServices());
     } catch (error) {
       console.error('Error loading services:', error);
     } finally {
@@ -42,84 +41,70 @@ export function ServicesManager() {
     }
   };
 
+  const handleSeed = async () => {
+    setIsSeeding(true);
+    try {
+      const seeded = await seedServicesIfEmpty();
+      setServices(seeded);
+    } catch (error) {
+      console.error('Error seeding services:', error);
+      alert(`Error seeding default services. Please try again. ${error}`);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleAdd = async () => {
     if (!formData.service_name || !formData.service_value) return;
-
     try {
-      const maxOrder = Math.max(...services.map((s) => s.sort_order), 0);
-
-      const { error } = await supabase.from('services_config').insert({
-        service_name: formData.service_name,
-        service_value: formData.service_value,
-        description: formData.description,
-        sort_order: maxOrder + 1,
-      });
-
-      if (error) throw error;
-
-      setFormData({ service_name: '', service_value: '', description: '' });
+      await createService(formData);
+      setFormData({ ...EMPTY_FORM });
       setShowAddForm(false);
       loadServices();
     } catch (error) {
       console.error('Error adding service:', error);
-      alert('Error adding service. Please try again.');
+      alert(`Error adding service. Please try again. ${error}`);
     }
   };
 
   const handleUpdate = async (id: string) => {
     const service = services.find((s) => s.id === id);
     if (!service) return;
-
     try {
-      const { error } = await supabase
-        .from('services_config')
-        .update({
-          service_name: service.service_name,
-          service_value: service.service_value,
-          description: service.description,
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateService(id, service);
       setEditingId(null);
       loadServices();
     } catch (error) {
       console.error('Error updating service:', error);
-      alert('Error updating service. Please try again.');
+      alert(`Error updating service. Please try again. ${error}`);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this service?')) return;
-
     try {
-      const { error } = await supabase.from('services_config').delete().eq('id', id);
-
-      if (error) throw error;
+      await deleteService(id);
       loadServices();
     } catch (error) {
       console.error('Error deleting service:', error);
-      alert('Error deleting service. Please try again.');
+      alert(`Error deleting service. Please try again. ${error}`);
     }
   };
 
   const toggleActive = async (id: string) => {
     const service = services.find((s) => s.id === id);
     if (!service) return;
-
     try {
-      const { error } = await supabase
-        .from('services_config')
-        .update({ is_active: !service.is_active })
-        .eq('id', id);
-
-      if (error) throw error;
+      await updateService(id, { is_active: !service.is_active });
       loadServices();
     } catch (error) {
       console.error('Error toggling service:', error);
-      alert('Error updating service. Please try again.');
+      alert(`Error updating service. Please try again. ${error}`);
     }
+  };
+
+  const patchLocal = (id: string, patch: Partial<Service>) => {
+    setServices(services.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   };
 
   if (isLoading) {
@@ -139,13 +124,25 @@ export function ServicesManager() {
             Manage available services shown in the booking form
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Service
-        </button>
+        <div className="flex items-center gap-2">
+          {services.length === 0 && (
+            <button
+              onClick={handleSeed}
+              disabled={isSeeding}
+              className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors disabled:opacity-50"
+            >
+              {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Load Default Services
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Service
+          </button>
+        </div>
       </div>
 
       {/* Add Form */}
@@ -156,7 +153,7 @@ export function ServicesManager() {
             <button
               onClick={() => {
                 setShowAddForm(false);
-                setFormData({ service_name: '', service_value: '', description: '' });
+                setFormData({ ...EMPTY_FORM });
               }}
               className="p-2 hover:bg-muted rounded-lg transition-colors"
             >
@@ -172,7 +169,7 @@ export function ServicesManager() {
                 value={formData.service_name}
                 onChange={(e) => setFormData({ ...formData, service_name: e.target.value })}
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="e.g., Web Development"
+                placeholder="e.g., Advisory Call"
               />
             </div>
 
@@ -183,20 +180,58 @@ export function ServicesManager() {
                 value={formData.service_value}
                 onChange={(e) => setFormData({ ...formData, service_value: e.target.value })}
                 className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                placeholder="e.g., web-development"
+                placeholder="e.g., advisory-call"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Use lowercase with hyphens, no spaces
               </p>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block mb-2">Duration (minutes)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={formData.duration_minutes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, duration_minutes: Number(e.target.value) })
+                  }
+                  className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">Price (USD)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={formData.is_free}
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                  className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                />
+              </div>
+              <div className="flex items-end pb-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_free}
+                    onChange={(e) => setFormData({ ...formData, is_free: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                  />
+                  <span className="text-sm">Free</span>
+                </label>
+              </div>
+            </div>
+
             <div>
               <label className="block mb-2">Description</label>
-              <input
-                type="text"
+              <textarea
+                rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full px-4 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 placeholder="Brief description of this service"
               />
             </div>
@@ -209,6 +244,15 @@ export function ServicesManager() {
               Add Service
             </button>
           </div>
+        </div>
+      )}
+
+      {services.length === 0 && !showAddForm && (
+        <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center">
+          <p className="text-muted-foreground mb-1">No services yet.</p>
+          <p className="text-sm text-muted-foreground">
+            Click “Load Default Services” to seed your Milah Grace Co. offers, or add one manually.
+          </p>
         </div>
       )}
 
@@ -239,49 +283,65 @@ export function ServicesManager() {
                       <input
                         type="text"
                         value={service.service_name}
-                        onChange={(e) => {
-                          setServices(
-                            services.map((s) =>
-                              s.id === service.id ? { ...s, service_name: e.target.value } : s
-                            )
-                          );
-                        }}
+                        onChange={(e) => patchLocal(service.id, { service_name: e.target.value })}
                         className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                         placeholder="Service Name"
                       />
                       <input
                         type="text"
                         value={service.service_value}
-                        onChange={(e) => {
-                          setServices(
-                            services.map((s) =>
-                              s.id === service.id ? { ...s, service_value: e.target.value } : s
-                            )
-                          );
-                        }}
+                        onChange={(e) => patchLocal(service.id, { service_value: e.target.value })}
                         className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
                         placeholder="service-value"
                       />
-                      <input
-                        type="text"
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          value={service.duration_minutes}
+                          onChange={(e) =>
+                            patchLocal(service.id, { duration_minutes: Number(e.target.value) })
+                          }
+                          className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                          placeholder="Minutes"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          disabled={service.is_free}
+                          value={service.price}
+                          onChange={(e) => patchLocal(service.id, { price: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm disabled:opacity-50"
+                          placeholder="Price"
+                        />
+                        <label className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={service.is_free}
+                            onChange={(e) =>
+                              patchLocal(service.id, {
+                                is_free: e.target.checked,
+                                price: e.target.checked ? 0 : service.price,
+                              })
+                            }
+                            className="w-4 h-4 rounded border-border"
+                          />
+                          Free
+                        </label>
+                      </div>
+                      <textarea
+                        rows={3}
                         value={service.description || ''}
-                        onChange={(e) => {
-                          setServices(
-                            services.map((s) =>
-                              s.id === service.id ? { ...s, description: e.target.value } : s
-                            )
-                          );
-                        }}
-                        className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                        onChange={(e) => patchLocal(service.id, { description: e.target.value })}
+                        className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm resize-none"
                         placeholder="Description"
                       />
                     </div>
                   ) : (
                     <>
                       <div className="font-medium mb-1">{service.service_name}</div>
-                      <div className="font-mono text-sm text-muted-foreground mb-1">
-                        {service.service_value}
-                      </div>
+                      <div className="text-sm text-secondary mb-1">{formatServiceMeta(service)}</div>
                       {service.description && (
                         <p className="text-sm text-muted-foreground">{service.description}</p>
                       )}
@@ -310,7 +370,10 @@ export function ServicesManager() {
                         <Save className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => setEditingId(null)}
+                        onClick={() => {
+                          setEditingId(null);
+                          loadServices();
+                        }}
                         className="p-2 hover:bg-muted rounded-lg transition-colors"
                         title="Cancel"
                       >

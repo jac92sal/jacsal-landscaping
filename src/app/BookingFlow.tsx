@@ -37,38 +37,25 @@ export function BookingFlow() {
   }[currentStep];
 
   const generateAIAnalysis = (data: ScreeningOneData): AIAnalysis => {
-    // Simulate AI analysis based on input
-    const serviceScores: Record<string, number> = {
-      consulting: 85,
-      design: 90,
-      development: 88,
-      marketing: 82,
-      other: 75,
-    };
+    // Simulate AI analysis based on input. Services are now fully configurable,
+    // so we generate a response from the selected service name rather than a
+    // fixed set of keys.
+    const serviceLabel = data.serviceName || 'the selected service';
 
-    const score = serviceScores[data.serviceInterest] || 80;
+    // Light heuristic: a more detailed description nudges the alignment score up.
+    const detailBonus = Math.min(15, Math.floor((data.description?.length || 0) / 40));
+    const score = Math.min(98, 80 + detailBonus);
 
-    const alignmentTexts: Record<string, string> = {
-      consulting:
-        'Your project aligns well with our strategic consulting services. We have extensive experience helping clients navigate complex business challenges.',
-      design:
-        "Excellent match! Your creative needs align perfectly with our design team's expertise in creating compelling visual experiences.",
-      development:
-        'Great fit! Your technical requirements match our engineering capabilities. We can help bring your vision to life.',
-      marketing:
-        'Strong alignment with our marketing services. We can help you reach and engage your target audience effectively.',
-      other:
-        "We can certainly help! Based on your description, we'll connect you with the right specialist from our team.",
-    };
+    const alignment = `Based on your responses, ${serviceLabel} looks like a strong fit for what you described. We'll review your details and prepare for a focused, productive session together.`;
 
     const recommendations = [
-      `We recommend a comprehensive ${data.serviceInterest} approach`,
-      'Consider starting with a discovery phase to align expectations',
-      'Our team will prepare customized materials for your consultation',
+      `Come prepared with your main goal for the ${serviceLabel.toLowerCase()}`,
+      'Consider what a successful outcome would look like for you',
+      "We'll tailor the session to your specific situation and next steps",
     ];
 
     return {
-      alignment: alignmentTexts[data.serviceInterest] || alignmentTexts.other,
+      alignment,
       score,
       recommendations,
     };

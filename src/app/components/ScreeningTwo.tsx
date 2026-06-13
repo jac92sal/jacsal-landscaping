@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import { Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface ScreeningTwoProps {
-  aiAnalysis: {
-    alignment: string;
-    score: number;
-    recommendations: string[];
-  };
   onComplete: (data: ScreeningTwoData) => void;
 }
 
@@ -17,7 +11,7 @@ export interface ScreeningTwoData {
   additionalNotes: string;
 }
 
-export function ScreeningTwo({ aiAnalysis, onComplete }: ScreeningTwoProps) {
+export function ScreeningTwo({ onComplete }: ScreeningTwoProps) {
   const [formData, setFormData] = useState<ScreeningTwoData>({
     goals: '',
     challenges: '',
@@ -34,43 +28,6 @@ export function ScreeningTwo({ aiAnalysis, onComplete }: ScreeningTwoProps) {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="mb-1">AI Analysis Results</h3>
-            <p className="text-muted-foreground">
-              Based on your initial responses, here's our assessment
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="font-mono text-2xl text-primary">{aiAnalysis.score}%</div>
-            <div className="text-sm text-muted-foreground">Match</div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm mb-2">Service Alignment</h4>
-            <p className="text-foreground">{aiAnalysis.alignment}</p>
-          </div>
-
-          <div>
-            <h4 className="text-sm mb-2">Recommendations</h4>
-            <ul className="space-y-2">
-              {aiAnalysis.recommendations.map((rec, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-secondary mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <h2 className="mb-2">Detailed Information</h2>

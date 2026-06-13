@@ -29,7 +29,7 @@ export function BookingFlow() {
     email: string;
   } | null>(null);
 
-  const steps = ['Initial Screening', 'Detailed Info', 'Book Time', 'Confirmed'];
+  const steps = ['Client Intake', 'Detailed Info', 'Book Time', 'Confirmed'];
   const stepIndex = {
     'screening-one': 0,
     'screening-two': 1,
@@ -190,8 +190,8 @@ export function BookingFlow() {
             <ScreeningOne onComplete={handleScreeningOneComplete} />
           )}
 
-          {currentStep === 'screening-two' && aiAnalysis && (
-            <ScreeningTwo aiAnalysis={aiAnalysis} onComplete={handleScreeningTwoComplete} />
+          {currentStep === 'screening-two' && (
+            <ScreeningTwo onComplete={handleScreeningTwoComplete} />
           )}
 
           {currentStep === 'booking' && <BookingCalendar onBook={handleBooking} />}

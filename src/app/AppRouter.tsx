@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { BookingFlow } from './BookingFlow';
 import { Admin } from './components/admin/Admin';
 import { WidgetView } from './components/WidgetView';
@@ -19,14 +19,20 @@ function AdminFab() {
 }
 
 export function AppRouter() {
+  // Served standalone at a root domain (Cloudflare Pages) → BrowserRouter with
+  // clean paths. Bundled into jacsal-web under /intake/ (Workers static assets,
+  // whose SPA fallback only knows the site root) → HashRouter, so every in-app
+  // route lives after the # and never needs a server-side rewrite.
+  const embedded = import.meta.env.BASE_URL !== '/';
+  const Router = embedded ? HashRouter : BrowserRouter;
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<BookingFlow />} />
         <Route path="/widget" element={<WidgetView />} />
         <Route path="/admin/*" element={<Admin />} />
       </Routes>
       <AdminFab />
-    </BrowserRouter>
+    </Router>
   );
 }

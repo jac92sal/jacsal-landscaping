@@ -17,6 +17,11 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  // When bundled into the jacsal-web marketing site the app is served from
+  // https://jacsalservices.com/intake/, so all asset URLs must be prefixed
+  // with that path. Set VITE_EMBED_BASE=/intake/ for that build; the default
+  // '/' keeps the standalone Cloudflare Pages deploy (root domain) unchanged.
+  base: process.env.VITE_EMBED_BASE || '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if

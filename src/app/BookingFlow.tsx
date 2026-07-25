@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { SiteHeader } from './components/SiteHeader';
+import { SiteFooter } from './components/SiteFooter';
 import { StepIndicator } from './components/StepIndicator';
 import { ScreeningOne, ScreeningOneData } from './components/ScreeningOne';
 import { ScreeningTwo, ScreeningTwoData } from './components/ScreeningTwo';
@@ -166,47 +166,66 @@ export function BookingFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="mb-3">Client Consultation Booking</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Complete our AI-powered screening process to ensure we're the right fit for your needs,
-            then schedule your personalized consultation.
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <SiteHeader />
 
-        {/* Step Indicator */}
-        {currentStep !== 'confirmation' && (
-          <div className="mb-12">
-            <StepIndicator currentStep={stepIndex} steps={steps} />
+      <main className="flex-1 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Page intro */}
+          <div className="text-center mb-12">
+            <p
+              className="mb-3"
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--primary)',
+              }}
+            >
+              Client Intake
+            </p>
+            <h1 className="mb-3">Client Consultation Booking</h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Complete our AI-powered screening process to ensure we're the right fit for your needs,
+              then schedule your personalized consultation.
+            </p>
           </div>
-        )}
 
-        {/* Current Step Content */}
-        <div className="bg-card/50 rounded-xl p-8">
-          {currentStep === 'screening-one' && (
-            <ScreeningOne onComplete={handleScreeningOneComplete} />
+          {/* Step Indicator */}
+          {currentStep !== 'confirmation' && (
+            <div className="mb-12">
+              <StepIndicator currentStep={stepIndex} steps={steps} />
+            </div>
           )}
 
-          {currentStep === 'screening-two' && (
-            <ScreeningTwo onComplete={handleScreeningTwoComplete} />
-          )}
+          {/* Current Step Content */}
+          <div className="bg-card rounded-xl p-8 border border-border shadow-sm">
+            {currentStep === 'screening-one' && (
+              <ScreeningOne onComplete={handleScreeningOneComplete} />
+            )}
 
-          {currentStep === 'booking' && <BookingCalendar onBook={handleBooking} />}
+            {currentStep === 'screening-two' && (
+              <ScreeningTwo onComplete={handleScreeningTwoComplete} />
+            )}
 
-          {currentStep === 'confirmation' && bookingDetails && (
-            <Confirmation
-              bookingDetails={bookingDetails}
-              screeningId={screeningId}
-              requiresDocuments={screeningOneData?.requiresDocuments}
-              serviceName={screeningOneData?.serviceName}
-              onStartOver={handleStartOver}
-            />
-          )}
+            {currentStep === 'booking' && <BookingCalendar onBook={handleBooking} />}
+
+            {currentStep === 'confirmation' && bookingDetails && (
+              <Confirmation
+                bookingDetails={bookingDetails}
+                screeningId={screeningId}
+                requiresDocuments={screeningOneData?.requiresDocuments}
+                serviceName={screeningOneData?.serviceName}
+                onStartOver={handleStartOver}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }

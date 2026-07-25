@@ -1,47 +1,52 @@
 @custom-variant dark (&:is(.dark *));
 
+/* JacSal brand palette — light forms, blue/navy/gray, to match jacsalservices.com.
+   Brand blues: #015BB6 primary, #1A4C81 navy, #3A82D0 mid, #6EA4DF light.
+   (The dark site header lives in SiteHeader; the form surfaces stay light for
+   readability, tinted cool instead of the old warm cream.) */
 :root {
   --font-size: 16px;
   --font-sans: 'Inter', sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  /* Headings use the site's display face. Var name kept for compatibility. */
+  --font-serif: 'Montserrat', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  --background: #FAF8F5;
-  --foreground: #2A2A2A;
+  --background: #F4F7FB;
+  --foreground: #14233A;
   --card: #FFFFFF;
-  --card-foreground: #2A2A2A;
+  --card-foreground: #14233A;
   --popover: #FFFFFF;
-  --popover-foreground: #2A2A2A;
-  --primary: #C4705A;
+  --popover-foreground: #14233A;
+  --primary: #015BB6;
   --primary-foreground: #FFFFFF;
-  --secondary: #6B8E6F;
+  --secondary: #1A4C81;
   --secondary-foreground: #FFFFFF;
-  --muted: #E8E3DC;
-  --muted-foreground: #6B6B6B;
-  --accent: #6B8E6F;
-  --accent-foreground: #FFFFFF;
+  --muted: #E8EEF6;
+  --muted-foreground: #5B6B7D;
+  --accent: #EAF1FB;
+  --accent-foreground: #0E2647;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: #D4CEC4;
+  --border: #D5DEEA;
   --input: transparent;
   --input-background: #FFFFFF;
-  --switch-background: #D4CEC4;
+  --switch-background: #C8D3E0;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #C4705A;
-  --chart-1: #C4705A;
-  --chart-2: #6B8E6F;
-  --chart-3: #E8E3DC;
-  --chart-4: #D4CEC4;
-  --chart-5: #8FA492;
+  --ring: #015BB6;
+  --chart-1: #015BB6;
+  --chart-2: #3A82D0;
+  --chart-3: #6EA4DF;
+  --chart-4: #1A4C81;
+  --chart-5: #9CC3F0;
   --radius: 0.5rem;
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #2A2A2A;
-  --sidebar-primary: #C4705A;
+  --sidebar-foreground: #14233A;
+  --sidebar-primary: #015BB6;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F5F3F0;
-  --sidebar-accent-foreground: #2A2A2A;
-  --sidebar-border: #D4CEC4;
-  --sidebar-ring: #C4705A;
+  --sidebar-accent: #EAF1FB;
+  --sidebar-accent-foreground: #0E2647;
+  --sidebar-border: #D5DEEA;
+  --sidebar-ring: #015BB6;
 }
 
 .dark {

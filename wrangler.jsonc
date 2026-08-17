@@ -1,0 +1,93 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jacsal-intake",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // One Worker per subdomain. This Worker owns intake.jacsalservices.com and
+  // nothing else — the marketing site stays on jacsal-web.
+  "routes": [
+    {
+      "pattern": "intake.jacsalservices.com",
+      "custom_domain": true
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  },
+
+  // Static SPA. Asset hits never invoke the Worker (free + edge-cached);
+  // everything under /api/* always does, even if a file could match.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jacsal-intake-db",
+      "database_id": "f3d610a3-3d1f-437a-a813-48222e49808a",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Tenant records and their service catalogs. Read on nearly every request and
+  // tiny, so KV's edge caching beats a D1 round trip.
+  "kv_namespaces": [
+    {
+      "binding": "CONFIG",
+      "id": "56090979e35b4e74bbbee2533846ae99"
+    }
+  ],
+
+  // Property photo bytes. Never public — the Worker streams them to admins and
+  // to the vision call via signed, short-lived URLs it issues itself.
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "jacsal-intake-photos"
+    }
+  ],
+
+  // Shared auth service — typed RPC over a Service Binding, never public HTTP.
+  // Replaces the hardcoded admin credentials the Supabase build shipped with.
+  "services": [
+    {
+      "binding": "AUTH",
+      "service": "jacsal-auth",
+      "entrypoint": "AuthService"
+    }
+  ],
+
+  // ⚠️ CONFIRM BEFORE FIRST DEPLOY:
+  //   wrangler secrets-store secret list --store-id 393ef1d6ad114ec598b1b2abf1e9a2b6
+  // The store ID below is correct (read from the account). The two secret_name
+  // values are the expected spellings but were NOT verified — the sandbox
+  // blocked listing them. Some names in this store are misspelled on purpose
+  // and must be used exactly as stored, so check these two before deploying and
+  // correct them here if they differ. Do not "fix" a misspelling in the store.
+  "secrets_store_secrets": [
+    {
+      "binding": "ANTHROPIC_API_KEY",
+      "store_id": "393ef1d6ad114ec598b1b2abf1e9a2b6",
+      "secret_name": "ANTHROPIC_API_KEY"
+    },
+    {
+      "binding": "GOOGLE_MAPS_API_KEY",
+      "store_id": "393ef1d6ad114ec598b1b2abf1e9a2b6",
+      "secret_name": "GOOGLE_MAPS_API_KEY"
+    }
+  ],
+
+  "vars": {
+    // Tenant used when no /t/<slug> prefix is present, so a bare visit to
+    // intake.jacsalservices.com lands on JacSal's own intake rather than 404ing.
+    "DEFAULT_TENANT": "jacsal",
+    // Vision model for the property assessment. Overridable per tenant in KV.
+    "ASSESSMENT_MODEL": "claude-opus-5"
+  }
+}

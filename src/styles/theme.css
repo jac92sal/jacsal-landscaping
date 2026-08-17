@@ -1,52 +1,53 @@
 @custom-variant dark (&:is(.dark *));
 
-/* JacSal brand palette — light forms, blue/navy/gray, to match jacsalservices.com.
-   Brand blues: #015BB6 primary, #1A4C81 navy, #3A82D0 mid, #6EA4DF light.
-   (The dark site header lives in SiteHeader; the form surfaces stay light for
-   readability, tinted cool instead of the old warm cream.) */
+/* Landscaping palette — light forms on a warm, slightly green-tinted ground.
+   Greens: #2F7A3E primary, #1E5130 deep, #4FA463 mid, #8FCB9B light.
+   Surfaces stay light for outdoor phone readability (these forms get filled in
+   standing in a front yard), with the green reserved for actions and accents
+   rather than large fills. Per-tenant primaryColor overrides this at runtime. */
 :root {
   --font-size: 16px;
   --font-sans: 'Inter', sans-serif;
   /* Headings use the site's display face. Var name kept for compatibility. */
   --font-serif: 'Montserrat', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  --background: #F4F7FB;
-  --foreground: #14233A;
+  --background: #F5F8F3;
+  --foreground: #17251A;
   --card: #FFFFFF;
-  --card-foreground: #14233A;
+  --card-foreground: #17251A;
   --popover: #FFFFFF;
-  --popover-foreground: #14233A;
-  --primary: #015BB6;
+  --popover-foreground: #17251A;
+  --primary: #2F7A3E;
   --primary-foreground: #FFFFFF;
-  --secondary: #1A4C81;
+  --secondary: #1E5130;
   --secondary-foreground: #FFFFFF;
-  --muted: #E8EEF6;
-  --muted-foreground: #5B6B7D;
-  --accent: #EAF1FB;
-  --accent-foreground: #0E2647;
+  --muted: #E7EFE5;
+  --muted-foreground: #5F6F60;
+  --accent: #E8F3E6;
+  --accent-foreground: #16341C;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: #D5DEEA;
+  --border: #D6E2D2;
   --input: transparent;
   --input-background: #FFFFFF;
-  --switch-background: #C8D3E0;
+  --switch-background: #C6D6C2;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #015BB6;
-  --chart-1: #015BB6;
-  --chart-2: #3A82D0;
-  --chart-3: #6EA4DF;
-  --chart-4: #1A4C81;
-  --chart-5: #9CC3F0;
+  --ring: #2F7A3E;
+  --chart-1: #2F7A3E;
+  --chart-2: #4FA463;
+  --chart-3: #8FCB9B;
+  --chart-4: #1E5130;
+  --chart-5: #C2E3C8;
   --radius: 0.5rem;
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #14233A;
-  --sidebar-primary: #015BB6;
+  --sidebar-foreground: #17251A;
+  --sidebar-primary: #2F7A3E;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #EAF1FB;
-  --sidebar-accent-foreground: #0E2647;
-  --sidebar-border: #D5DEEA;
-  --sidebar-ring: #015BB6;
+  --sidebar-accent: #E8F3E6;
+  --sidebar-accent-foreground: #16341C;
+  --sidebar-border: #D6E2D2;
+  --sidebar-ring: #2F7A3E;
 }
 
 .dark {

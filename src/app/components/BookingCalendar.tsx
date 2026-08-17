@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, isSameDay, addMonths, subMonths } from 'date-fns';
 
 interface BookingCalendarProps {
   onBook: (date: Date, time: string) => void;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, Loader2, Trash2, Upload, AlertTriangle } from 'lucide-react'
-import { api, type IntakeConfig, type Lead, type Photo } from '../../lib/api'
+import { api, type IntakeConfig, type LatLng, type Lead, type Photo } from '../../lib/api'
+import { LawnTracer } from './LawnTracer'
 
 /**
  * Guided prompts rather than a bare file picker. Naming the shot does two jobs:
@@ -96,6 +97,9 @@ export function PhotosStep({
     fenceLengthFt: lead.measurements.fenceLengthFt?.toString() ?? '',
   })
   const [unsure, setUnsure] = useState(false)
+  const [trace, setTrace] = useState<{ polygon: LatLng[]; areaSqFt: number; zoom: number } | null>(
+    null,
+  )
 
   useEffect(() => {
     void api
@@ -145,6 +149,11 @@ export function PhotosStep({
         clientTurfSqft: unsure ? null : num(measurements.clientTurfSqft),
         treeCount: num(measurements.treeCount),
         fenceLengthFt: num(measurements.fenceLengthFt),
+        // A traced boundary is a measurement; the typed numbers are a recollection.
+        // Both are sent, and the Worker decides which to quote from and flags any
+        // meaningful disagreement rather than silently picking one.
+        polygon: trace?.polygon ?? null,
+        zoom: trace?.zoom ?? null,
       })
       const { lead: updated } = await api.updateLead(slug, lead.id, token, {
         photosCompleted: !skipped && photos.length > 0,
@@ -245,7 +254,7 @@ export function PhotosStep({
           <h3 className="mb-1">Rough sizes</h3>
           <p className="text-sm text-muted-foreground">
             Estimates are fine — we confirm on site.
-            {config.parcelLookupEnabled && ' We’ll also check county records against your address.'}
+            {config.mapsEnabled && ' Or trace your lawn on the map below and we’ll measure it exactly.'}
           </p>
         </div>
 
@@ -306,6 +315,23 @@ export function PhotosStep({
           </div>
         )}
       </div>
+
+      {config.mapsEnabled && lead.serviceAddress && (
+        <div className="border border-border rounded-xl p-5">
+          <LawnTracer
+            slug={slug}
+            leadId={lead.id}
+            token={token}
+            address={lead.serviceAddress}
+            onChange={setTrace}
+          />
+          {trace && (
+            <p className="mt-3 text-sm text-primary">
+              We'll use {trace.areaSqFt.toLocaleString()} sq ft from your tracing.
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <p className="text-sm text-destructive flex items-start gap-2">

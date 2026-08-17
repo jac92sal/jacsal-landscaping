@@ -1,10 +1,16 @@
 /**
  * Measurement resolution.
  *
- * Three independent sources, never collapsed into a single opaque number:
+ * Two independent sources, never collapsed into a single opaque number:
  *   client  — what the customer typed
- *   parcel  — authoritative lot data from a parcel lookup
  *   traced  — exact geodesic area of a polygon the customer drew on satellite
+ *
+ * There is deliberately no parcel source. Google Maps Platform has no assessor
+ * data — no APN, no legal lot size — and for a landscaping quote that matters
+ * less than it sounds: a lot includes the house, driveway, and hardscape, so it
+ * was never the number being quoted. The traced lawn boundary is. The parcel_*
+ * columns remain on the table so county data can be layered in later without a
+ * migration, and resolveMeasurements still accepts a lot size for cross-checking.
  *
  * Ground photos are deliberately NOT a source here. A handheld photo has no
  * scale reference, so anything derived from one would be a guess presented as a
@@ -18,13 +24,6 @@ const SQM_TO_SQFT = 10.763910416709722
 export interface LatLng {
   lat: number
   lng: number
-}
-
-export interface ParcelInfo {
-  apn: string | null
-  lotSqft: number | null
-  zone: string | null
-  source: string
 }
 
 export type TurfSource = 'client' | 'parcel' | 'traced'
@@ -76,36 +75,12 @@ export function isValidPolygon(points: unknown): points is LatLng[] {
 }
 
 /**
- * Address → parcel record (APN, lot size, zoning).
- *
- * NOT WIRED YET — returns null so callers degrade to trace-only measurement.
- *
- * The data exists: `adu-san-diego-api` and its D1 (`adu-san-diego`) already
- * resolve address → apn / lot_sqft / zone for San Diego. Reaching into that
- * database directly from this Worker would couple two apps through storage,
- * which the house rules rule out, and calling it over public HTTP is also out.
- * The correct wiring is one of:
- *   (a) add a `ParcelService` WorkerEntrypoint to adu-san-diego-api and service-
- *       bind it here — cheapest, but puts a shared capability inside an app; or
- *   (b) extract a `parcel-service` Worker owning the parcel data, service-bound
- *       by both apps — correct if anything else will ever need parcel data.
- * That's an architecture decision, so it is being raised rather than improvised.
- */
-export async function lookupParcel(
-  _env: Env,
-  _address: string,
-  _city?: string | null,
-): Promise<ParcelInfo | null> {
-  return null
-}
-
-/**
  * Pick the turf figure to quote from, and say why.
  *
  * Priority is traced → client, because a drawn boundary is measured while a
- * typed number is recalled. Parcel lot size is deliberately NOT used as turf:
- * a lot includes the house, driveway, and hardscape, so treating it as lawn
- * would systematically over-quote. It is used to sanity-check instead.
+ * typed number is recalled. A lot size, wherever it comes from, is deliberately
+ * NOT used as turf: it includes the house, driveway, and hardscape, so treating
+ * it as lawn would systematically over-quote. It sanity-checks instead.
  */
 export function resolveMeasurements(input: {
   clientTurfSqft?: number | null

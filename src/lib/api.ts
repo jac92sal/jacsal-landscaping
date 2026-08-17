@@ -32,8 +32,13 @@ export interface ServiceDto {
 export interface IntakeConfig {
   tenant: TenantConfig
   services: ServiceDto[]
+  /** False when no Maps key is configured — the tracer is hidden entirely. */
   mapsEnabled: boolean
-  parcelLookupEnabled: boolean
+}
+
+export interface LatLng {
+  lat: number
+  lng: number
 }
 
 export interface Measurements {
@@ -44,7 +49,10 @@ export interface Measurements {
   parcelZone: string | null
   parcelSource: string | null
   tracedTurfSqft: number | null
-  tracedPolygon: { lat: number; lng: number }[] | null
+  tracedPolygon: LatLng[] | null
+  lat: number | null
+  lng: number | null
+  traceZoom: number | null
   turfSqft: number | null
   turfSqftSource: string | null
   flag: string | null
@@ -196,9 +204,23 @@ export const api = {
       headers: leadHeaders(token),
     }),
 
-  /** Resolves client-entered numbers, the traced polygon, and parcel data. */
+  /** Geocode the service address so the tracer knows where to centre. */
+  locate: (slug: string, id: string, token: string) =>
+    request<{ lat: number | null; lng: number | null; found?: boolean; cached?: boolean }>(
+      `/api/t/${slug}/leads/${id}/locate`,
+      { method: 'POST', headers: leadHeaders(token) },
+    ),
+
+  /**
+   * Satellite tile URL for the tracer. The token rides as a query param because
+   * an <img> cannot send headers; the Worker accepts either form.
+   */
+  mapUrl: (slug: string, id: string, token: string, zoom: number) =>
+    `/api/t/${slug}/leads/${id}/map?zoom=${zoom}&t=${encodeURIComponent(token)}`,
+
+  /** Resolves the client-entered numbers against the traced polygon. */
   measure: (slug: string, id: string, token: string, body: Record<string, unknown>) =>
-    request<{ lead: Lead; parcelAvailable: boolean }>(`/api/t/${slug}/leads/${id}/measure`, {
+    request<{ lead: Lead }>(`/api/t/${slug}/leads/${id}/measure`, {
       method: 'POST',
       headers: leadHeaders(token),
       body: JSON.stringify(body),

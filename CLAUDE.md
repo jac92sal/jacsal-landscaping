@@ -25,7 +25,7 @@ Cloudflare.
 | `ASSETS` | Static assets | SPA fallback; `run_worker_first: ["/api/*"]` |
 | `AUTH` | Service binding | `jacsal-auth` → `AuthService` entrypoint |
 | `ANTHROPIC_API_KEY` | Secrets Store | store `393ef1d6ad114ec598b1b2abf1e9a2b6` |
-| `GOOGLE_MAPS_API_KEY` | Secrets Store | store `393ef1d6ad114ec598b1b2abf1e9a2b6` |
+| `GOOGLE_MAPS_API_KEY` | Secrets Store | store `393ef1d6ad114ec598b1b2abf1e9a2b6` — needs Geocoding API + Maps Static API enabled |
 
 > ⚠️ **Confirm both secret names before the first deploy.** The store ID is
 > correct, but the two `secret_name` values in `wrangler.jsonc` were not
@@ -74,27 +74,46 @@ never prices and never measures.**
 
 ## Measurements
 
-Three sources, kept separate so an admin can see *why* a figure is trusted
+Two sources, kept separate so an admin can see *why* a figure is trusted
 (`worker/lib/measure.ts`):
 
-- `traced_*` — geodesic area of a polygon drawn on satellite imagery. Exact.
+- `traced_*` — geodesic area of a polygon the customer draws on satellite
+  imagery. A real measurement, exact to the shape they drew.
 - `client_*` — what the customer typed.
-- `parcel_*` — authoritative lot data. **Not wired yet**; see below.
 
-Priority is traced → client. Parcel lot size is used to sanity-check, never as
-turf area (a lot includes house, driveway, and hardscape). Disagreements are
-recorded in `measurement_flag` rather than silently reconciled.
+Priority is traced → client. Disagreement beyond 35% is recorded in
+`measurement_flag` rather than silently reconciled.
 
-Ground photos are deliberately not a measurement source — a handheld photo has
-no scale reference.
+**There is no parcel source, deliberately.** Google Maps Platform has no
+assessor data — no APN, no legal lot size — and for a landscaping quote that
+matters less than it sounds: a lot includes the house, driveway, and hardscape,
+so it was never the number being quoted. The lawn is. The `parcel_*` columns
+stay on the table so county data can be layered in later without a migration,
+and `resolveMeasurements()` still accepts a lot size for cross-checking.
 
-> **Open architecture decision — parcel lookup.** `adu-san-diego-api` and its D1
-> already resolve address → APN / lot_sqft / zone for San Diego. Reading that DB
-> directly from this Worker would couple two apps through storage, and calling it
-> over public HTTP is also out. Wire it either by adding a `ParcelService`
-> `WorkerEntrypoint` to `adu-san-diego-api`, or by extracting a shared
-> `parcel-service` Worker. Until then `lookupParcel()` returns `null` and the app
-> degrades to trace-only.
+Ground photos are never a measurement source — a handheld photo has no scale
+reference. Overhead imagery at a known zoom does, which is the entire reason
+tracing works.
+
+### How tracing works
+
+`worker/lib/maps.ts` + `src/app/intake/LawnTracer.tsx`.
+
+1. `POST /api/t/<slug>/leads/<id>/locate` geocodes the service address once and
+   stores `lat`/`lng`. Geocoding is billed per call and addresses rarely change.
+2. `GET .../map?zoom=N` proxies a Static Maps satellite tile. The key never
+   reaches the browser, and the image is streamed, never stored — Google's terms
+   permit displaying imagery, not retaining it.
+3. The customer taps the lawn edge. Taps convert from logical pixels to
+   coordinates via Web Mercator against the tile's known centre and zoom, then
+   `polygonAreaSqFt()` computes the geodesic area.
+
+The tile centre and zoom are what make the pixel maths valid, so **the image must
+never be pannable** — zoom changes re-request a fresh, re-centred tile. Points
+are stored as coordinates, not pixels, so they survive a zoom change.
+
+Verified numerically: a 100 ft square returns exactly 10,000 sq ft, and
+project/unproject round-trips are lossless.
 
 ## Commands
 

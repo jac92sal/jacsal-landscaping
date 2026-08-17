@@ -22,10 +22,12 @@ before the customer sees it and recorded so the drift is visible. It never
 returns a price and never returns a measurement. Prices come from the catalog
 afterwards, so editing one updates every future quote.
 
-Measurement comes from three tracked-separately sources: a polygon traced on
-satellite imagery (exact), what the customer typed, and authoritative parcel
-data. When they disagree, the app says so instead of quietly picking one. A
-handheld ground photo is never a measurement source — it has no scale reference.
+Measurement comes from two tracked-separately sources: a polygon the customer
+traces on satellite imagery of their own address, and what they typed. The
+traced shape is a real geodesic measurement, not an estimate; when the two
+disagree by more than a third, the app says so instead of quietly picking one.
+A handheld ground photo is never a measurement source — it has no scale
+reference. Overhead imagery at a known zoom does, which is why tracing works.
 
 ## Development
 

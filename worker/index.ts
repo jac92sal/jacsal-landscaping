@@ -40,6 +40,7 @@ import {
   createLead,
   listLeads,
   markAssessed,
+  saveGeocode,
   requireOwnedLead,
   requireLead,
   toLeadDto,
@@ -55,7 +56,8 @@ import {
   uploadPhoto,
 } from './lib/photos'
 import { assessProperty, saveAssessment } from './lib/assess'
-import { isValidPolygon, lookupParcel, polygonAreaSqFt, resolveMeasurements } from './lib/measure'
+import { isValidPolygon, polygonAreaSqFt, resolveMeasurements } from './lib/measure'
+import { DEFAULT_ZOOM, clampZoom, geocode, hasMaps, satelliteImage } from './lib/maps'
 import { nowS } from './lib/http'
 
 const SESSION_COOKIE = 'jacsal_session'
@@ -267,8 +269,7 @@ async function publicRoutes(
       tenant: publicTenant(tenant),
       services: services.map(publicService),
       // Maps is optional; the SPA hides the tracing step when absent.
-      mapsEnabled: await hasMapsKey(env),
-      parcelLookupEnabled: Boolean(tenant.parcelLookupEnabled),
+      mapsEnabled: await hasMaps(env),
     })
   }
 
@@ -302,7 +303,10 @@ async function publicRoutes(
 
   const leadId = rest[1]
   if (!leadId) throw notFound('Unknown endpoint.')
-  const token = request.headers.get('x-lead-token')
+  // Header is the norm, but an <img>/<a> can't set one — so the satellite tile
+  // and photo endpoints also accept the token as `?t=`, same as /api/photos/:id.
+  const token =
+    request.headers.get('x-lead-token') ?? new URL(request.url).searchParams.get('t')
   const lead = await requireOwnedLead(env, slug, leadId, token)
   const action = rest[2]
 
@@ -341,6 +345,34 @@ async function publicRoutes(
     }
   }
 
+  // ---- Satellite tracing ----
+  // Geocode once and remember the result: geocoding is billed per call and the
+  // service address rarely changes.
+  if (action === 'locate' && method === 'POST') {
+    if (!lead.service_address) {
+      throw badRequest('Add the service address before locating the property.')
+    }
+    if (lead.lat !== null && lead.lng !== null) {
+      return ok({ lat: lead.lat, lng: lead.lng, cached: true })
+    }
+    const full = [lead.service_address, lead.city, lead.postal_code].filter(Boolean).join(', ')
+    const result = await geocode(env, full)
+    if (!result) {
+      return ok({ lat: null, lng: null, found: false })
+    }
+    await saveGeocode(env, slug, leadId, result.lat, result.lng)
+    return ok({ lat: result.lat, lng: result.lng, formatted: result.formatted, found: true })
+  }
+
+  // Proxied so the Maps key never reaches the browser. Streamed, never stored.
+  if (action === 'map' && method === 'GET') {
+    if (lead.lat === null || lead.lng === null) {
+      throw badRequest('This property has not been located yet.')
+    }
+    const zoom = clampZoom(new URL(request.url).searchParams.get('zoom') ?? DEFAULT_ZOOM)
+    return await satelliteImage(env, lead.lat, lead.lng, zoom)
+  }
+
   // ---- Measurements ----
   // Merges what the customer typed, what they traced, and (where available)
   // authoritative parcel data, then records which source won and why.
@@ -367,31 +399,23 @@ async function publicRoutes(
       fenceLengthFt: body.fenceLengthFt,
     })
 
-    let parcel = null
-    if (tenant.parcelLookupEnabled && withClientValues.service_address) {
-      parcel = await lookupParcel(env, withClientValues.service_address, withClientValues.city)
-    }
-
     const resolved = resolveMeasurements({
       clientTurfSqft: withClientValues.client_turf_sqft,
       tracedTurfSqft,
       clientLotSqft: withClientValues.client_lot_sqft,
-      parcelLotSqft: parcel?.lotSqft ?? null,
+      parcelLotSqft: null,
     })
 
     const updated = await updateMeasurements(env, slug, leadId, {
-      parcelApn: parcel?.apn ?? null,
-      parcelLotSqft: parcel?.lotSqft ?? null,
-      parcelZone: parcel?.zone ?? null,
-      parcelSource: parcel?.source ?? null,
       tracedTurfSqft,
       tracedPolygon: polygon,
+      traceZoom: tracedTurfSqft ? clampZoom(body.zoom) : null,
       turfSqft: resolved.turfSqft,
       turfSqftSource: resolved.turfSqftSource,
       measurementFlag: resolved.flag,
     })
 
-    return ok({ lead: toLeadDto(updated), parcelAvailable: parcel !== null })
+    return ok({ lead: toLeadDto(updated) })
   }
 
   // ---- Assessment ----
@@ -692,13 +716,5 @@ function parseAssessmentRow(row: Record<string, unknown>) {
     rejectedServiceValues: parse(row.rejected_service_values),
     inputTokens: row.input_tokens,
     outputTokens: row.output_tokens,
-  }
-}
-
-async function hasMapsKey(env: Env): Promise<boolean> {
-  try {
-    return Boolean(await env.GOOGLE_MAPS_API_KEY.get())
-  } catch {
-    return false
   }
 }

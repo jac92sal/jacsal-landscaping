@@ -35,6 +35,9 @@ export interface LeadRow {
   parcel_source: string | null
   traced_turf_sqft: number | null
   traced_polygon: string | null
+  lat: number | null
+  lng: number | null
+  trace_zoom: number | null
   turf_sqft: number | null
   turf_sqft_source: string | null
   measurement_flag: string | null
@@ -81,6 +84,9 @@ export function toLeadDto(row: LeadRow) {
       parcelSource: row.parcel_source,
       tracedTurfSqft: row.traced_turf_sqft,
       tracedPolygon: row.traced_polygon ? JSON.parse(row.traced_polygon) : null,
+      lat: row.lat,
+      lng: row.lng,
+      traceZoom: row.trace_zoom,
       turfSqft: row.turf_sqft,
       turfSqftSource: row.turf_sqft_source,
       flag: row.measurement_flag,
@@ -287,6 +293,7 @@ export async function updateMeasurements(
     parcelSource?: string | null
     tracedTurfSqft?: number | null
     tracedPolygon?: unknown | null
+    traceZoom?: number | null
     turfSqft?: number | null
     turfSqftSource?: string | null
     measurementFlag?: string | null
@@ -295,7 +302,7 @@ export async function updateMeasurements(
   await env.DB.prepare(
     `UPDATE leads SET
        parcel_apn = ?, parcel_lot_sqft = ?, parcel_zone = ?, parcel_source = ?,
-       traced_turf_sqft = ?, traced_polygon = ?,
+       traced_turf_sqft = ?, traced_polygon = ?, trace_zoom = ?,
        turf_sqft = ?, turf_sqft_source = ?, measurement_flag = ?,
        updated_at = ?
      WHERE id = ? AND tenant_slug = ?`,
@@ -307,6 +314,7 @@ export async function updateMeasurements(
       m.parcelSource ?? null,
       m.tracedTurfSqft ?? null,
       m.tracedPolygon ? JSON.stringify(m.tracedPolygon) : null,
+      m.traceZoom ?? null,
       m.turfSqft ?? null,
       m.turfSqftSource ?? null,
       m.measurementFlag ?? null,
@@ -369,4 +377,19 @@ function asInt(v: unknown): number | null {
 function asJsonArray(v: unknown): string {
   if (!Array.isArray(v)) return '[]'
   return JSON.stringify(v.filter((x) => typeof x === 'string').slice(0, 100))
+}
+
+/** Store the geocoded position of the service address. Server-written only. */
+export async function saveGeocode(
+  env: Env,
+  tenantSlug: string,
+  id: string,
+  lat: number,
+  lng: number,
+): Promise<void> {
+  await env.DB.prepare(
+    'UPDATE leads SET lat = ?, lng = ?, updated_at = ? WHERE id = ? AND tenant_slug = ?',
+  )
+    .bind(lat, lng, nowS(), id, tenantSlug)
+    .run()
 }

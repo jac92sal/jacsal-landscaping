@@ -11,6 +11,10 @@ Runs at `intake.jacsalservices.com` on a single Cloudflare Worker. One
 deployment serves many landscapers, each at `/t/<slug>` with their own service
 catalog, branding, and staff.
 
+Split out of the older client-screening app, which remains a separate product in
+its own repo at `screening.jacsalservices.com`. The two are not merged and do not
+share a deployment.
+
 ## How it works
 
 **Photos answer *what needs doing*. Measurements answer *how much*. The service

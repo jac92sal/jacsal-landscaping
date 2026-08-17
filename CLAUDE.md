@@ -4,16 +4,18 @@ Multi-tenant landscaping intake + AI property assessment. A homeowner submits
 property details, photos, and measurements; the app returns a recommended
 service list with upsell suggestions derived from the photos.
 
-Rebuilt from the previous Figma/Supabase "AI client screening" app. The old
-consulting flow still lives on `main`; this branch is the landscaping rebuild on
-Cloudflare.
+A separate product from the consulting/screening app it was rebuilt from. That
+one keeps its own repo (`jac92sal/Aipoweredclientscreeningapp`), its own Pages
+project (`jacsal-screening`), and its own live site
+(`screening.jacsalservices.com`). **The two are never merged** — they share some
+UI lineage and nothing else. This repo is landscaping only.
 
 | | |
 |---|---|
 | **Subdomain** | `intake.jacsalservices.com` |
 | **Worker** | `jacsal-intake` (route: `intake.jacsalservices.com`, custom domain) |
 | **Frontend** | React + Vite SPA, shadcn/ui, served as static assets |
-| **Repo** | `jac92sal/aipoweredclientscreeningapp`, branch `claude/landscaping-app-rebuild-k086ef` |
+| **Repo** | `jac92sal/jacsal-landscaping` (`main`) |
 
 ## Resources
 

@@ -88,6 +88,53 @@ el.map.add(new FeatureLayer({
 ```
 BuildingSceneLayer structure: `Overview` (shell) and `FullModel` group sublayers; `FullModel` holds disciplines (Architectural, Structural, Electrical, Mechanical) which hold `BuildingComponentSublayer`s (Walls, Doors, Columns, Foundation, …). Use `allSublayers` (flat) and match on `modelName`, not `title`. The Building Explorer component (`arcgis-building-explorer`) filters by discipline/level/phase.
 
+## Elevation: ground, ElevationLayer, queryElevation, profiles
+`ElevationLayer` is a tiled ImageServer layer that lives in `map.ground.layers`, never in the operational layers. `ground="world-elevation"` on `<arcgis-scene>` is shorthand for the Esri world terrain service `https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer` (needs the Elevation privilege on the API key).
+```html
+<arcgis-scene basemap="arcgis/topographic" ground="world-elevation" camera-position="-121.85,48.28,4000" camera-tilt="55">
+  <arcgis-elevation-profile slot="top-right"></arcgis-elevation-profile>
+</arcgis-scene>
+<script type="module">
+  const [ElevationLayer, Multipoint, Point] = await $arcgis.import([
+    "@arcgis/core/layers/ElevationLayer.js",
+    "@arcgis/core/geometry/Multipoint.js",
+    "@arcgis/core/geometry/Point.js",
+  ]);
+  const scene = document.querySelector("arcgis-scene");
+  await scene.viewOnReady();
+
+  // 1) Extra terrain source stacked on top of world elevation (later layers win where they have data).
+  const lidar = new ElevationLayer({
+    url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/OsoLandslide/OsoLandslide_After_3DTerrain/ImageServer",
+    title: "Post-slide LiDAR", visible: false,
+  });
+  scene.ground.when(() => scene.ground.layers.add(lidar));     // wait for the Ground instance
+  toggle.addEventListener("calciteSwitchChange", () => (lidar.visible = toggle.checked));
+  // Flat scene: hide every ground layer (or set ground="none" / ground.opacity).
+  // scene.ground.layers.forEach((l) => (l.visible = false));
+
+  // 2) Query elevation for points (works on a layer OR on scene.map.ground, which merges all ground layers).
+  const pts = new Multipoint({ points: [[-77.03, 38.89], [-77.04, 38.90]] });   // [lon, lat], WGS84 default
+  const r = await scene.map.ground.queryElevation(pts, { demResolution: "auto", returnSampleInfo: true });
+  r.geometry.points.forEach(([x, y, z], i) => console.log(x, y, Math.round(z), "m @", r.sampleInfo[i].demResolution, "m/px"));
+  // Polyline: r.geometry.paths[*][i][2] is z; ascent/descent = sum of consecutive z deltas.
+  // Single point: (await lidar.queryElevation(new Point({ longitude: -121.85, latitude: 48.28 }))).geometry.z
+  // noDataValue is returned when a sample falls outside the service; check r.noDataValue.
+
+  // 3) Many samples in one area: build a cached sampler once, then sample synchronously.
+  const sampler = await lidar.createElevationSampler(scene.extent, { demResolution: "finest-contiguous" });
+  const z = sampler.queryElevation(new Point({ longitude: -121.85, latitude: 48.28 })).z;
+
+  // 4) Profile component: ground vs scene (buildings) along a drawn or supplied line.
+  const profile = document.querySelector("arcgis-elevation-profile");
+  profile.profiles = [{ type: "ground" }, { type: "scene" }];
+  // profile.input = new Graphic({ geometry: polyline }) to skip interactive drawing.
+</script>
+```
+`demResolution`: `"auto"` (default, picks resolution from the geometry extent), `"finest-contiguous"` (best resolution that covers the whole geometry), or a number in metres. `ElevationLayer.fetchTile(level,row,col)` returns `{ values: Float32Array, width, height }` for raw tile math; `layer.sourceJSON` exposes the full ImageServer metadata. Custom services on another domain need CORS (ArcGIS Server ≥10.1 enables it by default). Server-side equivalents: the `arcgis-elevation` skill (Elevation REST API, up to 100 points) does the same without a browser.
+
+Layer placement on terrain: set `layer.elevationInfo = { mode: "on-the-ground" | "relative-to-ground" | "relative-to-scene" | "absolute-height", offset, featureExpressionInfo }` on FeatureLayer/GraphicsLayer/SceneLayer; `relative-to-scene` drapes points on top of buildings from BuildingSceneLayers/IntegratedMesh.
+
 ## npm / Vite / React
 ```bash
 npx @arcgis/create -n my-map -t react      # or -t vite | angular | vue | webpack | cdn | node
@@ -107,3 +154,7 @@ Vite needs no special plugin; the SDK ships ES modules and loads its assets from
 - Basemap enum names are `arcgis/streets`, `arcgis/topographic`, `arcgis/imagery`, `arcgis/navigation`, `arcgis/light-gray`, `arcgis/dark-gray`, `osm/standard`, etc.
 - 3D needs WebGL2; BuildingSceneLayers are heavy, keep `Overview` visible until the user opts into `FullModel`.
 - Attribution is rendered by the map component; do not hide `arcgis-attribution` in production.
+
+## Reference
+- Sample gallery (search by keyword): https://developers.arcgis.com/javascript/latest/sample-code/ — relevant slugs: `scene-elevationlayer`, `scene-toggle-elevation`, `elevation-query-points`, `elevation-query` (lines, with routing), `elevation-profile`, `elevation-profile-group`, `analysis-elevation-profile`, `elevation-analysis` (raster functions), `scene-elevationinfo`, `building-scene-layer-slice`, `building-scene-layer-filter`, `building-scene-layer-building-filter`, `intro-sceneview`, `scene-goto`, `scene-hittest`, `scene-underground`, `scene-shadow`.
+- API reference: https://developers.arcgis.com/javascript/latest/references/core/ (e.g. `.../layers/ElevationLayer/`, `.../Ground/`, `.../layers/BuildingSceneLayer/`).

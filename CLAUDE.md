@@ -129,3 +129,10 @@ npm run deploy          # vite build && wrangler deploy
 
 `worker-configuration.d.ts` is generated, not source — run `cf-typegen` after
 changing `wrangler.jsonc` and on a fresh clone before typechecking.
+
+## Skills
+
+`.claude/skills/` holds how-tos for external services used in site assessment (ArcGIS
+elevation, static maps, feature queries, DC soil, USGS ComCat) and the ADU
+feasibility report workflow. Index: `.claude/skills/README.md`. The Esri services
+read `ARCGIS_API_KEY`; it is not wired into the Worker yet.

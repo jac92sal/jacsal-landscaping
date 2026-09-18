@@ -102,6 +102,7 @@ export async function staticMapPoint(lon: number, lat: number, key: string, opts
 
 ## Gotchas
 - Check `Content-Type` before treating the body as an image; a JSON error body is the usual failure mode.
+- **Referrer-restricted API keys.** If an API key credential has any Referrers set, every request must carry a matching `Referer` header or the service answers `498 Token Invalid` (indistinguishable from a bad key). Browsers add it automatically; `curl` and Workers do not, so send `-H "Referer: https://<allowed-domain>/"` (Workers may set `Referer` on `fetch`). Clear the Referrers list, or add the calling domain, to avoid this.
 - `zoom` and `radius` cannot both be set.
 - GET URLs with 10 vertices are fine; more than that or any custom symbol means POST.
 - Do not embed the API key in HTML that ships to browsers unless the key is referrer-restricted in the ArcGIS dashboard. Prefer proxying through the Worker.

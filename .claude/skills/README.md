@@ -32,5 +32,6 @@ Conventions shared by the ArcGIS skills:
 - Coordinates are always `x = longitude`, `y = latitude`, WGS84 (wkid 4326) unless a layer says otherwise.
 - Esri location services (elevation, static maps) need an ArcGIS Location Platform API key. Read it from the environment as `ARCGIS_API_KEY`; never hard-code it and never commit it. If it is missing, say so and stop rather than guessing.
 - Public ArcGIS Server layers (like DC GIS) need no key.
+- An API key with Referrers configured returns `498 Token Invalid` unless the request sends a matching `Referer` header; server-side callers must set it explicitly.
 - Keys in the Worker come from the Cloudflare Secrets Store (CLAUDE.md resources table), never `wrangler secret put` and never `vars`.
 - Always send `f=json` and check the body for an `error` object; ArcGIS returns HTTP 200 with `{"error":{"code":...}}` on many failures.

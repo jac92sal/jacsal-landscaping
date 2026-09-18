@@ -85,4 +85,5 @@ export async function elevationMany(coords: [number, number][], key: string): Pr
 - `relativeTo=ellipsoid` differs from `meanSeaLevel` by the geoid undulation (tens of metres). Use mean sea level for anything a human reads.
 - Water: `z` is negative depth below the surface, not zero.
 - Errors may come back as HTTP 200 with an `error` object; always check the body.
+- **Referrer-restricted API keys.** If an API key credential has any Referrers set, every request must carry a matching `Referer` header or the service answers `498 Token Invalid` (indistinguishable from a bad key). Browsers add it automatically; `curl` and Workers do not, so send `-H "Referer: https://<allowed-domain>/"` (Workers may set `Referer` on `fetch`). Clear the Referrers list, or add the calling domain, to avoid this.
 - In this repo secrets live in the Cloudflare Secrets Store (see CLAUDE.md). If this call moves into the Worker, add `ARCGIS_API_KEY` to store `393ef1d6ad114ec598b1b2abf1e9a2b6`, bind it in `wrangler.jsonc` like `GOOGLE_MAPS_API_KEY`, and list it in the CLAUDE.md resources table. Locally, export it in the shell.

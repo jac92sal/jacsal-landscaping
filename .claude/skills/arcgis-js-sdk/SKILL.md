@@ -5,7 +5,7 @@ description: Build interactive 2D maps and 3D scenes in the browser with the Arc
 
 # ArcGIS Maps SDK for JavaScript (5.1)
 
-Web components are the primary API since 5.0; the older "widgets" are legacy. Version pin: `5.1` (patch versions as `5.1.x`). Verified 2026-09-18: CDN `https://js.arcgis.com/5.1/` and npm `@arcgis/core`, `@arcgis/map-components`, `@arcgis/create` at 5.1.24, `@esri/calcite-components` at 5.1.2.
+Web components are the primary API since 5.0; the older "widgets" are legacy. The SDK is a **core API** (`@arcgis/core`: Map, layers, geometry, rest, analysis) plus six component libraries that wrap it: **Map** (`arcgis-map`, `arcgis-scene`, zoom/search/layer-list/legend/slice/elevation-profile …), **Charts**, **AI** (beta), **Embeddable**, **Coding**, **Common**. All ship with the one CDN script; on npm each is its own package (`@arcgis/map-components`, `@arcgis/charts-components`, …). UI chrome (buttons, panels, switches, shell) comes from **Calcite** (`calcite-*` elements, icons, light/dark modes), also bundled in the CDN. Version pin: `5.1` (patch versions as `5.1.x`). Verified 2026-09-18: CDN `https://js.arcgis.com/5.1/` and npm `@arcgis/core`, `@arcgis/map-components`, `@arcgis/create` at 5.1.24, `@esri/calcite-components` at 5.1.2.
 
 ## Auth
 Basemaps and location services need an ArcGIS Location Platform **API key** with the Basemaps privilege (and Elevation for 3D ground). In the browser the key is exposed, so restrict it by **Referrers** in the dashboard (browsers send `Referer` automatically). Set it before any component loads:
@@ -15,7 +15,7 @@ Basemaps and location services need an ArcGIS Location Platform **API key** with
   esriConfig.apiKey = "AAPT...";   // referrer-restricted key, never an OAuth client secret
 </script>
 ```
-Public layers (e.g. DC GIS MapServers) need no key.
+Public layers (e.g. DC GIS MapServers) need no key, and an ArcGIS Online/Enterprise org can omit auth entirely if the app only touches items shared with Everyone. Secure resources (routing, places, private items) need an access token from API key, app (client credentials), or OAuth 2.0 user authentication; the Authentication guide (`/javascript/latest/authentication/access-tokens/`) picks between them. For user sign-in use `arcgis-identity`/`IdentityManager` with an OAuth app id, not an API key.
 
 ## Minimal CDN page (2D)
 ```html
@@ -157,4 +157,7 @@ Vite needs no special plugin; the SDK ships ES modules and loads its assets from
 
 ## Reference
 - Sample gallery (search by keyword): https://developers.arcgis.com/javascript/latest/sample-code/ — relevant slugs: `scene-elevationlayer`, `scene-toggle-elevation`, `elevation-query-points`, `elevation-query` (lines, with routing), `elevation-profile`, `elevation-profile-group`, `analysis-elevation-profile`, `elevation-analysis` (raster functions), `scene-elevationinfo`, `building-scene-layer-slice`, `building-scene-layer-filter`, `building-scene-layer-building-filter`, `intro-sceneview`, `scene-goto`, `scene-hittest`, `scene-underground`, `scene-shadow`.
+- Get started + CDN starter template: https://developers.arcgis.com/javascript/latest/get-started/ and https://github.com/Esri/jsapi-resources/tree/main/templates (CDN, Vite, React, Angular, Vue, webpack, Node, OAuth, Calcite templates).
+- Framework guides: `/javascript/latest/vite/`, `/javascript/latest/typescript/`, `/javascript/latest/react/`, `/javascript/latest/angular/`; patterns: `/javascript/latest/programming-patterns/` (attributes vs properties), `/javascript/latest/watch-for-changes/`, `/javascript/latest/building-your-ui/` (Calcite modes), `/javascript/latest/components-transition-plan/` (widgets → components).
+- Component references: `/javascript/latest/references/map-components/`, `charts-components`, `ai-components`, `embeddable-components`, `coding-components`, `common-components`; Calcite: https://developers.arcgis.com/calcite-design-system/components/.
 - API reference: https://developers.arcgis.com/javascript/latest/references/core/ (e.g. `.../layers/ElevationLayer/`, `.../Ground/`, `.../layers/BuildingSceneLayer/`).

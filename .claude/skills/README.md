@@ -7,6 +7,7 @@ Each `SKILL.md` is a self-contained how-to for one external service or data form
 |---|---|
 | `arcgis-elevation` | Need ground/water-depth elevation (metres) for one or up to 100 lon/lat points. |
 | `arcgis-static-maps` | Need a PNG/JPEG/WebP map image with pins, a route line, or a boundary, for a page, PDF, email, or report. |
+| `arcgis-js-sdk` | Need an interactive browser map or 3D scene: web components (`arcgis-map`, `arcgis-scene`), graphics, feature layers, BuildingSceneLayer + Slice for Revit/BIM models, React/Vite setup. |
 | `arcgis-feature-query` | Need to query ANY ArcGIS REST MapServer/FeatureServer layer (`/query`): WHERE filters, spatial filters, paging, stats, distinct values. |
 | `dc-gis-soil` | Need the USDA soil type / slope for a location or parcel in Washington, DC. Worked example of `arcgis-feature-query`. |
 | `usgs-comcat-phases` | Need earthquake origin + seismic phase-pick data from USGS ComCat, or must read/write the `getphases` CSV format. |
